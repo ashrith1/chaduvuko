@@ -1,0 +1,17 @@
+{
+  "name": "class-12-study-group-tracker",
+  "version": "1.0.0",
+  "description": "Minimal Daily Target & Board Exam Weightage Tracker for Class 12 Peers",
+  "main": "server/index.js",
+  "scripts": {
+    "build": "npm --prefix client install && npm --prefix client run build && npm --prefix server install",
+    "start": "node server/index.js",
+    "server": "node server/index.js",
+    "client": "npm --prefix client run dev",
+    "dev": "node start-dev.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  }
+}
