@@ -8,3 +8,17 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 )
+
+// Register PWA Service Worker for Mobile Installation
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((reg) => {
+        console.log('Chaduvuko PWA Service Worker registered:', reg.scope);
+      })
+      .catch((err) => {
+        console.warn('Chaduvuko PWA Service Worker registration failed:', err);
+      });
+  });
+}

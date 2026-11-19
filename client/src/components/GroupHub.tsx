@@ -8,13 +8,15 @@ interface GroupHubProps {
   overview: GroupOverview | null;
   onOpenNewUserModal: () => void;
   onUpdateStatus: (status: string) => void;
+  onSelectUser?: (user: User) => void;
 }
 
 export const GroupHub: React.FC<GroupHubProps> = ({
   currentUser,
   overview,
   onOpenNewUserModal,
-  onUpdateStatus
+  onUpdateStatus,
+  onSelectUser
 }) => {
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [statusInput, setStatusInput] = useState('');
@@ -221,11 +223,22 @@ export const GroupHub: React.FC<GroupHubProps> = ({
                       <div>
                         <div className="flex items-center gap-1.5">
                           <h4 className="font-bold text-slate-100 text-sm">{member.name}</h4>
-                          {isCurrent && (
+                          {isCurrent ? (
                             <span className="text-[10px] bg-indigo-950 text-indigo-300 border border-indigo-800/60 px-1.5 py-0.2 rounded font-semibold">
                               You
                             </span>
-                          )}
+                          ) : onSelectUser ? (
+                            <button
+                              onClick={() => {
+                                if ('vibrate' in navigator) navigator.vibrate(25);
+                                onSelectUser(member);
+                              }}
+                              className="text-[10px] bg-slate-800 hover:bg-indigo-950 text-slate-300 hover:text-indigo-300 border border-slate-700 hover:border-indigo-800 px-1.5 py-0.5 rounded font-medium transition active:scale-95"
+                              title={`Switch active user to ${member.name}`}
+                            >
+                              Switch 👤
+                            </button>
+                          ) : null}
                         </div>
                         <p className="text-[11px] text-slate-400 italic truncate max-w-[170px] mt-0.5">
                           "{member.status || 'Studying'}"

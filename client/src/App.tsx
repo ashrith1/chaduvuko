@@ -390,6 +390,7 @@ export const App: React.FC = () => {
         {currentTab === 'daily' && (
           <DailyTargets
             currentUser={currentUser}
+            users={users}
             selectedDate={selectedDate}
             targets={targets}
             onToggleTarget={handleToggleTarget}
@@ -401,6 +402,7 @@ export const App: React.FC = () => {
             }}
             onNavigateToSyllabus={() => handleTabChange('syllabus')}
             onStartTimerForTarget={handleStartTimerForTarget}
+            onSelectUser={handleSelectUser}
           />
         )}
 
@@ -421,6 +423,7 @@ export const App: React.FC = () => {
             overview={groupOverview}
             onOpenNewUserModal={() => setIsUserModalOpen(true)}
             onUpdateStatus={handleUpdateStatus}
+            onSelectUser={handleSelectUser}
           />
         )}
 

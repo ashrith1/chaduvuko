@@ -5,6 +5,7 @@ import { CompleteTaskModal } from './CompleteTaskModal';
 
 interface DailyTargetsProps {
   currentUser: User | null;
+  users?: User[];
   selectedDate: string;
   targets: Target[];
   onToggleTarget: (id: string, options?: { completedQuestionsType?: 'all' | 'custom'; completedQuestionsCount?: number }) => void;
@@ -12,6 +13,7 @@ interface DailyTargetsProps {
   onOpenAddModal: (subject: SubjectType, broadcast?: boolean) => void;
   onNavigateToSyllabus: () => void;
   onStartTimerForTarget: (targetId: string) => void;
+  onSelectUser?: (user: User) => void;
 }
 
 const SUBJECT_CONFIG: Record<
@@ -53,18 +55,21 @@ const SUBJECT_CONFIG: Record<
 
 export const DailyTargets: React.FC<DailyTargetsProps> = ({
   currentUser,
+  users = [],
   selectedDate,
   targets,
   onToggleTarget,
   onDeleteTarget,
   onOpenAddModal,
   onNavigateToSyllabus,
-  onStartTimerForTarget
+  onStartTimerForTarget,
+  onSelectUser
 }) => {
   const subjects: SubjectType[] = ['Maths', 'Physics', 'Chemistry'];
 
-  // State for completion dialog
+  // State for completion dialog & quick user switcher
   const [completingTarget, setCompletingTarget] = useState<Target | null>(null);
+  const [quickSwitcherOpen, setQuickSwitcherOpen] = useState(false);
 
   // Filter targets for current user and date
   const userTargets = targets.filter(
@@ -119,11 +124,64 @@ export const DailyTargets: React.FC<DailyTargetsProps> = ({
       <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xl">{currentUser?.avatar || '👤'}</span>
               <h2 className="text-base sm:text-lg font-bold text-slate-100 tracking-tight">
                 {currentUser?.name ? `${currentUser.name}'s Daily Targets` : 'Daily Study Goals'}
               </h2>
+
+              {/* Quick Profile Switcher Pill */}
+              {users.length > 1 && onSelectUser && (
+                <div className="relative">
+                  <button
+                    onClick={() => setQuickSwitcherOpen(!quickSwitcherOpen)}
+                    className="text-[11px] px-2 py-0.5 rounded-lg bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-800/80 transition flex items-center gap-1 font-semibold active:scale-95 shadow-sm"
+                    title="Switch student profile"
+                  >
+                    <span>Switch</span>
+                    <span className="text-[9px]">▾</span>
+                  </button>
+
+                  {quickSwitcherOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-30"
+                        onClick={() => setQuickSwitcherOpen(false)}
+                      />
+                      <div className="absolute left-0 mt-1 w-48 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl py-1.5 z-40 animate-fade-in">
+                        <div className="px-3 py-1 text-[10px] font-bold text-slate-500 uppercase">
+                          Select Student
+                        </div>
+                        {users.map((u) => {
+                          const isSel = u.id === currentUser?.id;
+                          return (
+                            <button
+                              key={u.id}
+                              onClick={() => {
+                                if ('vibrate' in navigator) navigator.vibrate(25);
+                                onSelectUser(u);
+                                setQuickSwitcherOpen(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 flex items-center justify-between text-xs transition ${
+                                isSel
+                                  ? 'bg-indigo-950/70 text-indigo-300 font-bold'
+                                  : 'text-slate-300 hover:bg-slate-800'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 truncate">
+                                <span>{u.avatar}</span>
+                                <span className="truncate">{u.name}</span>
+                              </div>
+                              {isSel && <Check className="w-3.5 h-3.5 text-indigo-400" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
               <span className="text-[11px] px-2 py-0.5 rounded-full font-medium bg-slate-800 text-slate-300 border border-slate-700">
                 {selectedDate}
               </span>
