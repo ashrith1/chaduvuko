@@ -67,6 +67,34 @@ export const api = {
     return data.user;
   },
 
+  async deleteUser(id: string): Promise<void> {
+    const res = await fetch(`${API_BASE}/users/${id}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to delete user');
+    }
+  },
+
+  async getSettings(): Promise<{ appTitle: string; appBadge: string }> {
+    const res = await fetch(`${API_BASE}/settings`);
+    if (!res.ok) throw new Error('Failed to fetch settings');
+    const data = await res.json();
+    return data.settings;
+  },
+
+  async updateSettings(settings: { appTitle?: string; appBadge?: string }): Promise<{ appTitle: string; appBadge: string }> {
+    const res = await fetch(`${API_BASE}/settings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings)
+    });
+    if (!res.ok) throw new Error('Failed to update settings');
+    const data = await res.json();
+    return data.settings;
+  },
+
   async getTargets(date?: string, userId?: string): Promise<Target[]> {
     const params = new URLSearchParams();
     if (date) params.append('date', date);

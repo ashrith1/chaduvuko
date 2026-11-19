@@ -237,6 +237,45 @@ app.patch('/api/users/:id', (req, res) => {
   res.json({ success: true, user });
 });
 
+app.delete('/api/users/:id', (req, res) => {
+  const { id } = req.params;
+  const idx = store.users.findIndex(u => u.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'User not found' });
+  
+  // Prevent deleting last user
+  if (store.users.length <= 1) {
+    return res.status(400).json({ error: 'Cannot delete the only member in the group' });
+  }
+
+  const removed = store.users.splice(idx, 1)[0];
+  // Also clean up user's targets
+  store.targets = store.targets.filter(t => t.userId !== id);
+  if (store.chapterProgress[id]) {
+    delete store.chapterProgress[id];
+  }
+
+  saveStore();
+  res.json({ success: true, removedUser: removed });
+});
+
+// App Settings (Website Name & Badge)
+app.get('/api/settings', (req, res) => {
+  const settings = store.settings || {
+    appTitle: '12th Prep',
+    appBadge: 'BIEAP State Board'
+  };
+  res.json({ success: true, settings });
+});
+
+app.post('/api/settings', (req, res) => {
+  const { appTitle, appBadge } = req.body;
+  if (!store.settings) store.settings = {};
+  if (appTitle) store.settings.appTitle = appTitle.trim();
+  if (appBadge) store.settings.appBadge = appBadge.trim();
+  saveStore();
+  res.json({ success: true, settings: store.settings });
+});
+
 // 3. Targets Endpoints
 app.get('/api/targets', (req, res) => {
   const { date, userId } = req.query;

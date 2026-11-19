@@ -9,6 +9,7 @@ import { StudyTimer } from './components/StudyTimer';
 import { TargetModal } from './components/TargetModal';
 import { UserModal } from './components/UserModal';
 import { SyllabusEditorModal } from './components/SyllabusEditorModal';
+import { ManageUsersModal } from './components/ManageUsersModal';
 
 export const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -16,6 +17,12 @@ export const App: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>(
     () => new Date().toISOString().split('T')[0]
   );
+
+  // App Settings (Website Name & Badge)
+  const [appSettings, setAppSettings] = useState<{ appTitle: string; appBadge: string }>({
+    appTitle: '12th Prep',
+    appBadge: 'BIEAP State Board'
+  });
 
   // Core Data
   const [users, setUsers] = useState<User[]>([]);
@@ -34,22 +41,28 @@ export const App: React.FC = () => {
   const [targetModalChapter, setTargetModalChapter] = useState<Chapter | null>(null);
 
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [isManageUsersModalOpen, setIsManageUsersModalOpen] = useState(false);
   const [isEditorModalOpen, setIsEditorModalOpen] = useState(false);
 
   // Fetch all initial data
   const loadData = useCallback(async () => {
     try {
-      const [fetchedSyllabus, fetchedUsers, fetchedTargets, fetchedOverview] = await Promise.all([
+      const [fetchedSyllabus, fetchedUsers, fetchedTargets, fetchedOverview, fetchedSettings] = await Promise.all([
         api.getSyllabus(),
         api.getUsers(),
         api.getTargets(selectedDate),
-        api.getGroupOverview(selectedDate)
+        api.getGroupOverview(selectedDate),
+        api.getSettings().catch(() => ({ appTitle: '12th Prep', appBadge: 'BIEAP State Board' }))
       ]);
 
       setSyllabus(fetchedSyllabus);
       setUsers(fetchedUsers);
       setTargets(fetchedTargets);
       setGroupOverview(fetchedOverview);
+      if (fetchedSettings?.appTitle) {
+        setAppSettings(fetchedSettings);
+        document.title = `${fetchedSettings.appTitle} | ${fetchedSettings.appBadge}`;
+      }
 
       // Determine active user
       const storedUserId = api.getCurrentUserId();
@@ -230,7 +243,7 @@ export const App: React.FC = () => {
     }
   };
 
-  // User handlers
+  // User management handlers
   const handleAddUser = async (data: { name: string; avatar: string; targetScore: string }) => {
     try {
       const created = await api.createUser(data);
@@ -245,6 +258,43 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleUpdateUser = async (id: string, payload: Partial<User>) => {
+    try {
+      const updated = await api.updateUser(id, payload);
+      setUsers((prev) => prev.map((u) => (u.id === id ? updated : u)));
+      if (currentUser?.id === id) {
+        setCurrentUser(updated);
+      }
+      const updatedOverview = await api.getGroupOverview(selectedDate);
+      setGroupOverview(updatedOverview);
+    } catch (e) {
+      console.error('Error updating user:', e);
+      throw e;
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    try {
+      await api.deleteUser(id);
+      const remaining = users.filter((u) => u.id !== id);
+      setUsers(remaining);
+      if (currentUser?.id === id) {
+        const nextUser = remaining[0] || null;
+        setCurrentUser(nextUser);
+        if (nextUser) api.setCurrentUserId(nextUser.id);
+      }
+      const [updatedTargets, updatedOverview] = await Promise.all([
+        api.getTargets(selectedDate),
+        api.getGroupOverview(selectedDate)
+      ]);
+      setTargets(updatedTargets);
+      setGroupOverview(updatedOverview);
+    } catch (e) {
+      console.error('Error deleting user:', e);
+      throw e;
+    }
+  };
+
   const handleUpdateStatus = async (statusText: string) => {
     if (!currentUser) return;
     try {
@@ -255,6 +305,18 @@ export const App: React.FC = () => {
       setGroupOverview(updatedOverview);
     } catch (e) {
       console.error('Error updating status:', e);
+    }
+  };
+
+  // Website Settings handler
+  const handleSaveSettings = async (settings: { appTitle: string; appBadge: string }) => {
+    try {
+      const updated = await api.updateSettings(settings);
+      setAppSettings(updated);
+      document.title = `${updated.appTitle} | ${updated.appBadge}`;
+    } catch (e) {
+      console.error('Error saving settings:', e);
+      throw e;
     }
   };
 
@@ -274,7 +336,7 @@ export const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 gap-3">
         <div className="w-9 h-9 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs font-semibold tracking-wide text-slate-300">Loading BIEAP 12th Board Tracker...</p>
+        <p className="text-xs font-semibold tracking-wide text-slate-300">Loading {appSettings.appTitle}...</p>
       </div>
     );
   }
@@ -291,14 +353,17 @@ export const App: React.FC = () => {
         currentUser={currentUser}
         users={users}
         currentTab={currentTab}
+        appTitle={appSettings.appTitle}
+        appBadge={appSettings.appBadge}
         onTabChange={setCurrentTab}
         onSelectUser={handleSelectUser}
         onOpenNewUserModal={() => setIsUserModalOpen(true)}
+        onOpenManageUsersModal={() => setIsManageUsersModalOpen(true)}
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
       />
 
-      {/* Main Content Area (padded for mobile bottom navigation) */}
+      {/* Main Content Area */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-3.5 sm:px-4 py-4 sm:py-6 pb-24 md:pb-8">
         {currentTab === 'daily' && (
           <DailyTargets
@@ -348,7 +413,7 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      {/* Target Modal (with Broadcast to all members & 1M, 2M, 4M, 8M Question Types) */}
+      {/* Target Modal */}
       <TargetModal
         isOpen={isTargetModalOpen}
         onClose={() => setIsTargetModalOpen(false)}
@@ -361,11 +426,25 @@ export const App: React.FC = () => {
         onBroadcastTarget={handleBroadcastTarget}
       />
 
-      {/* User Modal */}
+      {/* Add User Modal */}
       <UserModal
         isOpen={isUserModalOpen}
         onClose={() => setIsUserModalOpen(false)}
         onAddUser={handleAddUser}
+      />
+
+      {/* Manage Users & Website Name Modal */}
+      <ManageUsersModal
+        isOpen={isManageUsersModalOpen}
+        onClose={() => setIsManageUsersModalOpen(false)}
+        users={users}
+        currentUser={currentUser}
+        appTitle={appSettings.appTitle}
+        appBadge={appSettings.appBadge}
+        onUpdateUser={handleUpdateUser}
+        onDeleteUser={handleDeleteUser}
+        onOpenAddUserModal={() => setIsUserModalOpen(true)}
+        onSaveSettings={handleSaveSettings}
       />
 
       {/* Syllabus & Weightage Editor / Upload Modal */}

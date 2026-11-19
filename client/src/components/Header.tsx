@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import type { User } from '../types';
-import { Flame, Users, Calendar, Plus, BookOpen, CheckSquare, Sparkles, Clock } from 'lucide-react';
+import { Flame, Users, Calendar, Plus, BookOpen, CheckSquare, Sparkles, Clock, Settings } from 'lucide-react';
 
 interface HeaderProps {
   currentUser: User | null;
   users: User[];
   currentTab: 'daily' | 'group' | 'syllabus' | 'timer';
+  appTitle?: string;
+  appBadge?: string;
   onTabChange: (tab: 'daily' | 'group' | 'syllabus' | 'timer') => void;
   onSelectUser: (user: User) => void;
   onOpenNewUserModal: () => void;
+  onOpenManageUsersModal: () => void;
   selectedDate: string;
   onDateChange: (date: string) => void;
 }
@@ -17,9 +20,12 @@ export const Header: React.FC<HeaderProps> = ({
   currentUser,
   users,
   currentTab,
+  appTitle = '12th Prep',
+  appBadge = 'BIEAP State Board',
   onTabChange,
   onSelectUser,
   onOpenNewUserModal,
+  onOpenManageUsersModal,
   selectedDate,
   onDateChange
 }) => {
@@ -30,21 +36,27 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Top Header */}
       <header className="border-b border-slate-800 bg-slate-950/85 backdrop-blur-md sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-3.5 sm:px-4 py-3 flex items-center justify-between gap-3">
-          {/* App Title & Board Badge */}
-          <div className="flex items-center gap-2.5">
+          {/* App Title & Board Badge (Clickable to change website name & settings) */}
+          <button
+            onClick={onOpenManageUsersModal}
+            className="flex items-center gap-2.5 text-left group hover:opacity-90 transition active:scale-95"
+            title="Click to change website name or manage friends"
+          >
             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 to-sky-400 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 shrink-0">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-bold text-slate-100 tracking-tight text-sm sm:text-base">12th Prep</span>
-                <span className="text-[10px] font-semibold bg-indigo-950 text-indigo-300 px-1.5 py-0.2 rounded-md border border-indigo-800/60">
-                  State Board
+                <span className="font-bold text-slate-100 tracking-tight text-sm sm:text-base group-hover:text-indigo-300 transition">
+                  {appTitle}
+                </span>
+                <span className="text-[10px] font-semibold bg-indigo-950 text-indigo-300 px-1.5 py-0.2 rounded-md border border-indigo-800/60 truncate max-w-[120px]">
+                  {appBadge}
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 hidden sm:block">Maths • Physics • Chemistry Target Tracker</p>
             </div>
-          </div>
+          </button>
 
           {/* Desktop Navigation Tabs */}
           <div className="hidden md:flex items-center bg-slate-900/90 p-1 rounded-2xl border border-slate-800/80">
@@ -97,7 +109,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
 
-          {/* Right Controls: Date & Profile Switcher */}
+          {/* Right Controls: Date, Profile Switcher & Settings */}
           <div className="flex items-center gap-2">
             {/* Date Selector */}
             <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-xl px-2 py-1.5 text-xs text-slate-300">
@@ -155,7 +167,9 @@ export const Header: React.FC<HeaderProps> = ({
                       ) : null}
                     </button>
                   ))}
+
                   <div className="border-t border-slate-800 my-1"></div>
+
                   <button
                     onClick={() => {
                       setUserDropdownOpen(false);
@@ -166,9 +180,29 @@ export const Header: React.FC<HeaderProps> = ({
                     <Plus className="w-3.5 h-3.5" />
                     <span>+ Add Friend to Group</span>
                   </button>
+
+                  <button
+                    onClick={() => {
+                      setUserDropdownOpen(false);
+                      onOpenManageUsersModal();
+                    }}
+                    className="w-full text-left px-3.5 py-2 flex items-center gap-2 text-xs text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition"
+                  >
+                    <Settings className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Manage Friends & Settings</span>
+                  </button>
                 </div>
               )}
             </div>
+
+            {/* Quick Settings Icon Button */}
+            <button
+              onClick={onOpenManageUsersModal}
+              className="p-2 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-400 hover:text-indigo-300 transition active:scale-95"
+              title="Manage Friends & Change Website Name"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
@@ -181,7 +215,7 @@ export const Header: React.FC<HeaderProps> = ({
         )}
       </header>
 
-      {/* MOBILE BOTTOM NAVIGATION BAR (Optimized for Android Ergonomics) */}
+      {/* MOBILE BOTTOM NAVIGATION BAR */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 border-t border-slate-800/90 backdrop-blur-lg px-2 py-1.5 pb-safe flex items-center justify-around shadow-2xl">
         <button
           onClick={() => onTabChange('daily')}
