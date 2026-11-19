@@ -13,7 +13,29 @@ import { ManageUsersModal } from './components/ManageUsersModal';
 
 export const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
-  const [currentTab, setCurrentTab] = useState<'daily' | 'group' | 'syllabus' | 'timer'>('daily');
+  const [currentTab, setCurrentTab] = useState<'daily' | 'group' | 'syllabus' | 'timer'>(() => {
+    const hash = window.location.hash.replace('#', '');
+    if (['daily', 'group', 'syllabus', 'timer'].includes(hash)) {
+      return hash as any;
+    }
+    return 'daily';
+  });
+
+  const handleTabChange = (tab: 'daily' | 'group' | 'syllabus' | 'timer') => {
+    setCurrentTab(tab);
+    window.location.hash = tab;
+  };
+
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (['daily', 'group', 'syllabus', 'timer'].includes(hash)) {
+        setCurrentTab(hash as any);
+      }
+    };
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
   const [selectedDate, setSelectedDate] = useState<string>(
     () => new Date().toISOString().split('T')[0]
   );
@@ -329,7 +351,7 @@ export const App: React.FC = () => {
 
   const handleStartTimerForTarget = (targetId: string) => {
     setActiveTimerTargetId(targetId);
-    setCurrentTab('timer');
+    handleTabChange('timer');
   };
 
   if (loading) {
@@ -355,7 +377,7 @@ export const App: React.FC = () => {
         currentTab={currentTab}
         appTitle={appSettings.appTitle}
         appBadge={appSettings.appBadge}
-        onTabChange={setCurrentTab}
+        onTabChange={handleTabChange}
         onSelectUser={handleSelectUser}
         onOpenNewUserModal={() => setIsUserModalOpen(true)}
         onOpenManageUsersModal={() => setIsManageUsersModalOpen(true)}
@@ -377,7 +399,7 @@ export const App: React.FC = () => {
               setTargetModalChapter(null);
               setIsTargetModalOpen(true);
             }}
-            onNavigateToSyllabus={() => setCurrentTab('syllabus')}
+            onNavigateToSyllabus={() => handleTabChange('syllabus')}
             onStartTimerForTarget={handleStartTimerForTarget}
           />
         )}
