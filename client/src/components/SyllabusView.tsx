@@ -29,7 +29,6 @@ export const SyllabusView: React.FC<SyllabusViewProps> = ({
   };
   const grandTotal = subjectTotals.Maths + subjectTotals.Physics + subjectTotals.Chemistry;
 
-  // Flatten chapters with subject tag
   let allChapters: (Chapter & { subject: SubjectType })[] = [];
   if (selectedSubject === 'All' || selectedSubject === 'Maths') {
     (syllabus.Maths || []).forEach((c) => allChapters.push({ ...c, subject: 'Maths' }));
@@ -41,7 +40,6 @@ export const SyllabusView: React.FC<SyllabusViewProps> = ({
     (syllabus.Chemistry || []).forEach((c) => allChapters.push({ ...c, subject: 'Chemistry' }));
   }
 
-  // Filter by search
   if (searchQuery.trim()) {
     const q = searchQuery.toLowerCase();
     allChapters = allChapters.filter(
@@ -52,7 +50,6 @@ export const SyllabusView: React.FC<SyllabusViewProps> = ({
     );
   }
 
-  // Sort
   if (sortBy === 'weightage') {
     allChapters.sort((a, b) => (Number(b.weightage) || 0) - (Number(a.weightage) || 0));
   } else if (sortBy === 'status') {
@@ -69,7 +66,6 @@ export const SyllabusView: React.FC<SyllabusViewProps> = ({
     });
   }
 
-  // User completion stats
   let completedWeightage = 0;
   allChapters.forEach((c) => {
     const st = userProgress[c.id]?.status;
@@ -83,68 +79,67 @@ export const SyllabusView: React.FC<SyllabusViewProps> = ({
   const percentComplete = grandTotal > 0 ? Math.round((completedWeightage / grandTotal) * 100) : 0;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Syllabus Header Banner */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-sm space-y-4">
+      <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-sm backdrop-blur-sm">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base sm:text-lg font-bold text-slate-100">
-                Andhra Pradesh Board (BIEAP) 2nd Year Blueprint
+              <h2 className="text-sm sm:text-base font-semibold text-zinc-100">
+                AP BIEAP Class 12 Blueprint
               </h2>
-              <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-indigo-950 text-indigo-300 border border-indigo-800/60">
-                Official {grandTotal} Marks
+              <span className="text-[11px] px-2 py-0.5 rounded-full font-medium bg-zinc-800 text-zinc-300 border border-zinc-750">
+                {grandTotal} Marks Total
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Exact chapter-wise question breakdowns: 1-Mark, 2-Marks, 4-Marks, and 8-Marks.
+            <p className="text-xs text-zinc-400 mt-0.5">
+              Chapter-wise blueprints: 1-Mark, 2-Marks, 4-Marks, and 8-Marks.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={onOpenEditorModal}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 text-xs font-semibold transition active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-750 text-zinc-300 hover:text-white border border-zinc-700/60 text-xs font-medium transition active:scale-95"
             >
-              <Upload className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Edit / Upload Custom</span>
+              <Upload className="w-3.5 h-3.5 text-zinc-400" />
+              <span>Edit / Upload</span>
             </button>
           </div>
         </div>
 
         {/* Board Marks Breakdown */}
-        <div className="pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-slate-400 font-medium">BIEAP Papers:</span>
-            <span className="bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800 text-indigo-300 font-semibold">
-              Maths: 136M (13 Topics)
+        <div className="pt-2.5 border-t border-zinc-800/60 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="bg-zinc-950 px-2 py-0.5 rounded-md border border-zinc-800 text-zinc-300 font-medium text-[11px]">
+              Maths: 136M
             </span>
-            <span className="bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800 text-sky-300 font-semibold">
-              Physics: 109M (14 Units)
+            <span className="bg-zinc-950 px-2 py-0.5 rounded-md border border-zinc-800 text-zinc-300 font-medium text-[11px]">
+              Physics: 109M
             </span>
-            <span className="bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800 text-emerald-300 font-semibold">
-              Chemistry: 109M (10 Units)
+            <span className="bg-zinc-950 px-2 py-0.5 rounded-md border border-zinc-800 text-zinc-300 font-medium text-[11px]">
+              Chemistry: 109M
             </span>
           </div>
 
-          <div className="text-slate-300 font-semibold">
-            Your Board Coverage: <span className="text-amber-400 font-bold">{Math.round(completedWeightage)}/{grandTotal} Marks</span> ({percentComplete}%)
+          <div className="text-zinc-300 text-xs">
+            Your Coverage: <strong className="text-zinc-100">{Math.round(completedWeightage)}/{grandTotal} Marks</strong> ({percentComplete}%)
           </div>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-2xl border border-slate-800">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-zinc-900/40 p-2.5 rounded-xl border border-zinc-800/80">
         {/* Subject Pills */}
-        <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+        <div className="flex items-center gap-1 bg-zinc-950 p-1 rounded-lg border border-zinc-800">
           {(['All', 'Maths', 'Physics', 'Chemistry'] as const).map((sub) => (
             <button
               key={sub}
               onClick={() => setSelectedSubject(sub)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition active:scale-95 ${
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition active:scale-95 ${
                 selectedSubject === sub
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-zinc-800 text-zinc-100 font-semibold'
+                  : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
               {sub}
@@ -154,161 +149,121 @@ export const SyllabusView: React.FC<SyllabusViewProps> = ({
 
         {/* Search & Sort */}
         <div className="flex items-center gap-2">
-          <div className="relative flex-1 sm:w-60">
-            <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+          <div className="relative flex-1 sm:w-56">
+            <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search lesson name..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 placeholder:text-slate-500"
+              placeholder="Search chapter..."
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-8 pr-2.5 py-1 text-xs text-zinc-200 focus:outline-none focus:border-zinc-600 placeholder:text-zinc-500"
             />
           </div>
 
-          <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 px-2.5 py-1.5 rounded-xl text-xs text-slate-300">
-            <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+          <div className="flex items-center gap-1 bg-zinc-950 border border-zinc-800 px-2 py-1 rounded-lg text-xs text-zinc-300">
+            <ArrowUpDown className="w-3 h-3 text-zinc-400" />
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="bg-transparent text-slate-200 text-xs focus:outline-none cursor-pointer"
+              className="bg-transparent text-zinc-300 text-xs focus:outline-none cursor-pointer"
             >
-              <option value="weightage" className="bg-slate-900">Highest Weightage</option>
-              <option value="curriculum" className="bg-slate-900">Curriculum Order</option>
-              <option value="status" className="bg-slate-900">My Mastery</option>
+              <option value="weightage" className="bg-zinc-900">Weightage</option>
+              <option value="curriculum" className="bg-zinc-900">Curriculum</option>
+              <option value="status" className="bg-zinc-900">Mastery</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* Chapters Grid / List with exact Question Type Breakdown */}
-      <div className="space-y-3">
+      {/* Chapters List */}
+      <div className="space-y-2">
         {allChapters.length === 0 ? (
-          <div className="text-center py-12 border border-dashed border-slate-800 rounded-3xl">
-            <p className="text-sm text-slate-400">No chapters found matching "{searchQuery}"</p>
+          <div className="text-center py-10 border border-dashed border-zinc-800 rounded-2xl">
+            <p className="text-xs text-zinc-500">No chapters found</p>
           </div>
         ) : (
           allChapters.map((chapter) => {
             const currentStatus = userProgress[chapter.id]?.status || 'not_started';
             const bd = chapter.breakdown || { '1M': 0, '2M': 0, '4M': 0, '8M': 0 };
-
-            const subjectColor =
-              chapter.subject === 'Maths'
-                ? 'text-indigo-400 bg-indigo-950/70 border-indigo-800/60'
-                : chapter.subject === 'Physics'
-                ? 'text-sky-400 bg-sky-950/70 border-sky-800/60'
-                : 'text-emerald-400 bg-emerald-950/70 border-emerald-800/60';
-
             const has8MarkLAQ = (bd['8M'] || 0) > 0;
 
             return (
               <div
                 key={chapter.id}
-                className="bg-slate-900/80 border border-slate-800 hover:border-slate-700 rounded-2xl p-4 transition flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-sm"
+                className="bg-zinc-900/50 border border-zinc-800/80 hover:border-zinc-700 rounded-xl p-3 sm:p-3.5 transition flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-sm"
               >
-                {/* Left: Chapter Details & Question Breakdown Pills */}
+                {/* Left */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${subjectColor}`}>
+                  <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                    <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
                       {chapter.subject}
                     </span>
 
                     {has8MarkLAQ && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                      <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-amber-950/60 text-amber-300 border border-amber-800/60 flex items-center gap-1">
                         <Sparkles className="w-2.5 h-2.5" />
-                        8-Mark LAQ ({bd['8M']} Qs)
+                        8-Mark LAQ
                       </span>
                     )}
 
                     {chapter.weightage >= 15 && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30">
-                        🔥 High Yield ({chapter.weightage}M)
+                      <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-zinc-800 text-rose-300 border border-zinc-700">
+                        High Yield
                       </span>
                     )}
                   </div>
 
-                  <h4 className="text-sm font-bold text-slate-100 tracking-tight">
+                  <h4 className="text-xs sm:text-sm font-semibold text-zinc-100">
                     {chapter.name}
                   </h4>
 
                   {/* Question Types Distribution Chips */}
-                  <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] text-slate-500 font-medium mr-1">Questions:</span>
-                    <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
-                        bd['1M'] > 0
-                          ? 'bg-indigo-950/60 text-indigo-300 border-indigo-800/60'
-                          : 'bg-slate-950 text-slate-600 border-slate-900'
-                      }`}
-                    >
-                      1M: {bd['1M'] || 0} Q
+                  <div className="mt-1.5 flex items-center gap-1.5 flex-wrap text-[10px]">
+                    <span className="text-zinc-500">Breakdown:</span>
+                    <span className="px-1.5 py-0.2 rounded bg-zinc-950 border border-zinc-800 text-zinc-400">
+                      1M: {bd['1M'] || 0}
                     </span>
-                    <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
-                        bd['2M'] > 0
-                          ? 'bg-sky-950/60 text-sky-300 border-sky-800/60'
-                          : 'bg-slate-950 text-slate-600 border-slate-900'
-                      }`}
-                    >
-                      2M: {bd['2M'] || 0} Q
+                    <span className="px-1.5 py-0.2 rounded bg-zinc-950 border border-zinc-800 text-zinc-400">
+                      2M: {bd['2M'] || 0}
                     </span>
-                    <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
-                        bd['4M'] > 0
-                          ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60'
-                          : 'bg-slate-950 text-slate-600 border-slate-900'
-                      }`}
-                    >
-                      4M: {bd['4M'] || 0} Q
+                    <span className="px-1.5 py-0.2 rounded bg-zinc-950 border border-zinc-800 text-zinc-400">
+                      4M: {bd['4M'] || 0}
                     </span>
-                    <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
-                        bd['8M'] > 0
-                          ? 'bg-amber-950/80 text-amber-300 border-amber-800/80 font-bold'
-                          : 'bg-slate-950 text-slate-600 border-slate-900'
-                      }`}
-                    >
-                      8M: {bd['8M'] || 0} Q
+                    <span className={`px-1.5 py-0.2 rounded border ${
+                      bd['8M'] > 0
+                        ? 'bg-amber-950/60 border-amber-800/60 text-amber-300 font-medium'
+                        : 'bg-zinc-950 border-zinc-800 text-zinc-600'
+                    }`}>
+                      8M: {bd['8M'] || 0}
                     </span>
                   </div>
                 </div>
 
-                {/* Right: Weightage & Actions */}
-                <div className="flex items-center gap-2.5 w-full md:w-auto justify-between md:justify-end pt-2 md:pt-0 border-t md:border-t-0 border-slate-800/70">
-                  {/* Total Marks badge */}
-                  <div className="text-center px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 min-w-[76px]">
-                    <div className="text-xs font-bold text-amber-300">
+                {/* Right */}
+                <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end pt-2 md:pt-0 border-t md:border-t-0 border-zinc-800/60">
+                  <div className="text-center px-2.5 py-1 rounded-lg bg-zinc-950 border border-zinc-800 min-w-[70px]">
+                    <div className="text-xs font-semibold text-zinc-200">
                       {chapter.weightage} Marks
                     </div>
-                    <div className="text-[10px] text-slate-500 font-medium">BIEAP Board</div>
                   </div>
 
-                  {/* Status Dropdown */}
                   <select
                     value={currentStatus}
                     onChange={(e) => onUpdateStatus(chapter.id, e.target.value as ChapterStatus)}
-                    className={`text-xs font-semibold rounded-xl px-2.5 py-2 border transition cursor-pointer focus:outline-none ${
-                      currentStatus === 'completed'
-                        ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
-                        : currentStatus === 'revised'
-                        ? 'bg-purple-950 text-purple-300 border-purple-800'
-                        : currentStatus === 'in_progress'
-                        ? 'bg-amber-950 text-amber-300 border-amber-800'
-                        : 'bg-slate-950 text-slate-400 border-slate-800'
-                    }`}
+                    className="text-xs font-medium rounded-lg px-2 py-1.5 bg-zinc-900 border border-zinc-750 text-zinc-300 focus:outline-none"
                   >
-                    <option value="not_started" className="bg-slate-900 text-slate-300">⚪ Not Started</option>
-                    <option value="in_progress" className="bg-slate-900 text-amber-300">🟡 In Progress</option>
-                    <option value="completed" className="bg-slate-900 text-emerald-300">🟢 Mastered</option>
-                    <option value="revised" className="bg-slate-900 text-purple-300">⭐ Revised (Exam Ready)</option>
+                    <option value="not_started">⚪ Not Started</option>
+                    <option value="in_progress">🟡 In Progress</option>
+                    <option value="completed">🟢 Mastered</option>
+                    <option value="revised">⭐ Revised</option>
                   </select>
 
-                  {/* Quick Add Target button */}
                   <button
                     onClick={() => onQuickAddTarget(chapter.subject, chapter)}
-                    className="p-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm active:scale-95 transition"
-                    title="Set as daily to-do target"
+                    className="p-1.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-900 active:scale-95 transition"
+                    title="Set as target"
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>

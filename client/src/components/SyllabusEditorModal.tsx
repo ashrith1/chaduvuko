@@ -26,7 +26,6 @@ export const SyllabusEditorModal: React.FC<SyllabusEditorModalProps> = ({
   const [parseError, setParseError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Quick edit chapter
   const handleUpdateChapter = (sub: SubjectType, index: number, field: keyof Chapter, value: any) => {
     const list = [...draftSyllabus[sub]];
     list[index] = { ...list[index], [field]: value };
@@ -52,76 +51,56 @@ export const SyllabusEditorModal: React.FC<SyllabusEditorModalProps> = ({
     setDraftSyllabus({ ...draftSyllabus, [sub]: list });
   };
 
-  // Smart Parser for pasted text
   const handleParseAndApplyText = () => {
     setParseError(null);
     try {
       const trimmed = pasteText.trim();
       if (trimmed.startsWith('{')) {
         const parsed = JSON.parse(trimmed);
-        if (parsed.Maths && parsed.Physics && parsed.Chemistry) {
+        if (parsed.Maths || parsed.Physics || parsed.Chemistry) {
           setDraftSyllabus(parsed);
           setActiveTab('editor');
           return;
         }
       }
 
+      const lines = trimmed.split('\n').map((l) => l.trim()).filter(Boolean);
       let currentSub: SubjectType = 'Maths';
-      const newSyllabus: SyllabusData = {
-        Maths: [],
-        Physics: [],
-        Chemistry: []
-      };
+      const newSyllabus: SyllabusData = { Maths: [], Physics: [], Chemistry: [] };
 
-      const lines = trimmed.split('\n');
-      for (const rawLine of lines) {
-        const line = rawLine.trim();
-        if (!line) continue;
-
-        if (line.toLowerCase().includes('[maths]') || line.toLowerCase().includes('# maths')) {
+      lines.forEach((line) => {
+        if (/^\[?maths?\]?$/i.test(line)) {
           currentSub = 'Maths';
-          continue;
+          return;
         }
-        if (line.toLowerCase().includes('[physics]') || line.toLowerCase().includes('# physics')) {
+        if (/^\[?physics?\]?$/i.test(line)) {
           currentSub = 'Physics';
-          continue;
+          return;
         }
-        if (line.toLowerCase().includes('[chemistry]') || line.toLowerCase().includes('# chemistry')) {
+        if (/^\[?chemistry?\]?$/i.test(line)) {
           currentSub = 'Chemistry';
-          continue;
+          return;
         }
 
-        const match = line.match(/^(.*?)(?::|-|,|=|\s{2,})\s*(\d+)(?:\s*(?:marks|m))?$/i);
+        const match = line.match(/^(.+?)(?::|-|\t|,)\s*(\d+)(?:\s*m|\s*marks)?$/i);
         if (match) {
           const name = match[1].replace(/^\d+[\.\)]\s*/, '').trim();
-          const weightage = parseInt(match[2], 10);
-          if (name && !isNaN(weightage)) {
-            newSyllabus[currentSub].push({
-              id: `${currentSub[0].toLowerCase()}-${Date.now().toString().slice(-4)}-${Math.random().toString(36).substring(2, 5)}`,
-              name,
-              weightage,
-              unit: 'Core'
-            });
-          }
-        } else {
-          const cleanName = line.replace(/^\d+[\.\)]\s*/, '').trim();
-          if (cleanName.length > 2) {
-            newSyllabus[currentSub].push({
-              id: `${currentSub[0].toLowerCase()}-${Date.now().toString().slice(-4)}-${Math.random().toString(36).substring(2, 5)}`,
-              name: cleanName,
-              weightage: 5,
-              unit: 'Core'
-            });
-          }
+          const marks = parseInt(match[2], 10) || 5;
+          newSyllabus[currentSub].push({
+            id: `${currentSub[0].toLowerCase()}-${Math.random().toString(36).substr(2, 6)}`,
+            name,
+            weightage: marks,
+            unit: 'Imported'
+          });
         }
-      }
+      });
 
       if (
         newSyllabus.Maths.length === 0 &&
         newSyllabus.Physics.length === 0 &&
         newSyllabus.Chemistry.length === 0
       ) {
-        throw new Error('Could not parse any lessons. Please check the format examples below.');
+        throw new Error('Could not parse lessons. Check format.');
       }
 
       const finalResult: SyllabusData = {
@@ -133,7 +112,7 @@ export const SyllabusEditorModal: React.FC<SyllabusEditorModalProps> = ({
       setDraftSyllabus(finalResult);
       setActiveTab('editor');
     } catch (err: any) {
-      setParseError(err.message || 'Failed to parse text. Please ensure valid syntax.');
+      setParseError(err.message || 'Failed to parse text.');
     }
   };
 
@@ -165,55 +144,55 @@ export const SyllabusEditorModal: React.FC<SyllabusEditorModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
         {/* Modal Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+        <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/60">
           <div>
-            <h3 className="text-base font-semibold text-slate-100">
-              Customize Board Exam Lessons & Weightages
+            <h3 className="text-sm sm:text-base font-semibold text-zinc-100">
+              Customize Lessons & Weightages
             </h3>
-            <p className="text-xs text-slate-400">
-              Add chapters, update marks, or upload your State Board syllabus blueprint.
+            <p className="text-xs text-zinc-400">
+              Update chapters or import syllabus data
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-800 transition"
+            className="text-zinc-400 hover:text-zinc-100 p-1.5 rounded-lg hover:bg-zinc-800 transition"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Tab Controls */}
-        <div className="px-5 pt-3 border-b border-slate-800 flex items-center justify-between bg-slate-950/30">
-          <div className="flex items-center gap-2">
+        <div className="px-4 pt-2 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/30">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={() => setActiveTab('editor')}
-              className={`px-3 py-2 text-xs font-medium border-b-2 transition ${
+              className={`px-3 py-1.5 text-xs font-medium border-b-2 transition ${
                 activeTab === 'editor'
-                  ? 'border-indigo-500 text-indigo-400 font-semibold'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                  ? 'border-zinc-100 text-zinc-100 font-semibold'
+                  : 'border-transparent text-zinc-400 hover:text-zinc-200'
               }`}
             >
-              Interactive Table
+              Table View
             </button>
             <button
               onClick={() => setActiveTab('paste')}
-              className={`px-3 py-2 text-xs font-medium border-b-2 transition ${
+              className={`px-3 py-1.5 text-xs font-medium border-b-2 transition ${
                 activeTab === 'paste'
-                  ? 'border-indigo-500 text-indigo-400 font-semibold'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                  ? 'border-zinc-100 text-zinc-100 font-semibold'
+                  : 'border-transparent text-zinc-400 hover:text-zinc-200'
               }`}
             >
-              Paste / Import Text
+              Paste Text
             </button>
             <button
               onClick={() => setActiveTab('upload')}
-              className={`px-3 py-2 text-xs font-medium border-b-2 transition ${
+              className={`px-3 py-1.5 text-xs font-medium border-b-2 transition ${
                 activeTab === 'upload'
-                  ? 'border-indigo-500 text-indigo-400 font-semibold'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                  ? 'border-zinc-100 text-zinc-100 font-semibold'
+                  : 'border-transparent text-zinc-400 hover:text-zinc-200'
               }`}
             >
               Upload File
@@ -222,32 +201,32 @@ export const SyllabusEditorModal: React.FC<SyllabusEditorModalProps> = ({
 
           <button
             onClick={async () => {
-              if (confirm('Reset all chapters and marks back to standard State Board defaults?')) {
+              if (confirm('Reset all chapters back to standard defaults?')) {
                 await onResetDefault();
                 onClose();
               }
             }}
-            className="text-[11px] text-slate-500 hover:text-rose-400 transition flex items-center gap-1"
+            className="text-[11px] text-zinc-500 hover:text-rose-400 transition flex items-center gap-1"
           >
             <RotateCcw className="w-3 h-3" />
-            <span>Reset Defaults</span>
+            <span>Reset</span>
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 flex-1 overflow-y-auto">
+        <div className="p-4 flex-1 overflow-y-auto">
           {activeTab === 'editor' && (
-            <div className="space-y-4">
+            <div className="space-y-3.5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                <div className="flex items-center gap-1 bg-zinc-950 p-1 rounded-lg border border-zinc-800">
                   {(['Maths', 'Physics', 'Chemistry'] as const).map((sub) => (
                     <button
                       key={sub}
                       onClick={() => setSelectedSubject(sub)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                      className={`px-3 py-1 rounded-md text-xs font-medium transition ${
                         selectedSubject === sub
-                          ? 'bg-indigo-600 text-white'
-                          : 'text-slate-400 hover:text-slate-200'
+                          ? 'bg-zinc-800 text-zinc-100 font-semibold'
+                          : 'text-zinc-400 hover:text-zinc-200'
                       }`}
                     >
                       {sub} ({draftSyllabus[sub]?.length || 0})
@@ -257,53 +236,52 @@ export const SyllabusEditorModal: React.FC<SyllabusEditorModalProps> = ({
 
                 <button
                   onClick={() => handleAddChapter(selectedSubject)}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 text-xs font-medium transition"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-750 text-zinc-200 text-xs font-medium transition"
                 >
-                  <Plus className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Add {selectedSubject} Lesson</span>
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Lesson</span>
                 </button>
               </div>
 
-              {/* Editable Table */}
-              <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-950/50">
+              {/* Table */}
+              <div className="border border-zinc-800 rounded-xl overflow-hidden bg-zinc-950/40">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-950 border-b border-slate-800 text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
+                  <thead className="bg-zinc-950 border-b border-zinc-800 text-zinc-400 font-medium text-[10px] uppercase tracking-wider">
                     <tr>
-                      <th className="p-3 w-12 text-center">#</th>
-                      <th className="p-3">Lesson / Chapter Name</th>
-                      <th className="p-3 w-40">Unit / Topic</th>
-                      <th className="p-3 w-28 text-center">Marks (Weightage)</th>
-                      <th className="p-3 w-12 text-center">Del</th>
+                      <th className="p-2.5 w-10 text-center">#</th>
+                      <th className="p-2.5">Chapter Name</th>
+                      <th className="p-2.5 w-36">Unit</th>
+                      <th className="p-2.5 w-24 text-center">Marks</th>
+                      <th className="p-2.5 w-10 text-center">Del</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60">
+                  <tbody className="divide-y divide-zinc-850">
                     {(draftSyllabus[selectedSubject] || []).map((chap, idx) => (
-                      <tr key={chap.id} className="hover:bg-slate-900/50 transition">
-                        <td className="p-3 text-center text-slate-500 font-mono text-[11px]">
+                      <tr key={chap.id} className="hover:bg-zinc-900/40 transition">
+                        <td className="p-2.5 text-center text-zinc-500 font-mono text-[10px]">
                           {idx + 1}
                         </td>
-                        <td className="p-2">
+                        <td className="p-1.5">
                           <input
                             type="text"
                             value={chap.name}
                             onChange={(e) =>
                               handleUpdateChapter(selectedSubject, idx, 'name', e.target.value)
                             }
-                            className="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none font-medium"
+                            className="w-full bg-zinc-900 border border-zinc-800 focus:border-zinc-600 rounded-lg px-2 py-1 text-xs text-zinc-200 focus:outline-none"
                           />
                         </td>
-                        <td className="p-2">
+                        <td className="p-1.5">
                           <input
                             type="text"
                             value={chap.unit || ''}
                             onChange={(e) =>
                               handleUpdateChapter(selectedSubject, idx, 'unit', e.target.value)
                             }
-                            className="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none"
-                            placeholder="e.g. Calculus"
+                            className="w-full bg-zinc-900 border border-zinc-800 focus:border-zinc-600 rounded-lg px-2 py-1 text-xs text-zinc-300 focus:outline-none"
                           />
                         </td>
-                        <td className="p-2">
+                        <td className="p-1.5">
                           <div className="flex items-center justify-center gap-1">
                             <input
                               type="number"
@@ -318,16 +296,15 @@ export const SyllabusEditorModal: React.FC<SyllabusEditorModalProps> = ({
                                   parseInt(e.target.value, 10) || 0
                                 )
                               }
-                              className="w-16 bg-slate-900 border border-slate-800 focus:border-indigo-500 rounded-lg px-2 py-1.5 text-xs text-center text-amber-300 font-bold focus:outline-none"
+                              className="w-14 bg-zinc-900 border border-zinc-800 focus:border-zinc-600 rounded-lg px-1.5 py-1 text-xs text-center text-zinc-200 font-medium focus:outline-none"
                             />
-                            <span className="text-[10px] text-slate-500">M</span>
+                            <span className="text-[10px] text-zinc-500">M</span>
                           </div>
                         </td>
-                        <td className="p-2 text-center">
+                        <td className="p-1.5 text-center">
                           <button
                             onClick={() => handleDeleteChapter(selectedSubject, idx)}
-                            className="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-900 transition"
-                            title="Remove chapter"
+                            className="text-zinc-500 hover:text-rose-400 p-1 rounded hover:bg-zinc-900 transition"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -341,33 +318,9 @@ export const SyllabusEditorModal: React.FC<SyllabusEditorModalProps> = ({
           )}
 
           {activeTab === 'paste' && (
-            <div className="space-y-4">
-              <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 text-xs text-slate-300 space-y-1">
-                <p className="font-semibold text-slate-200">How to format your text:</p>
-                <p className="text-slate-400">
-                  Use subject headers like <code className="text-indigo-400">[Maths]</code>, followed by chapter names with weightages:
-                </p>
-                <pre className="bg-slate-900 p-2.5 rounded-lg font-mono text-[11px] text-slate-300 overflow-x-auto border border-slate-800">
-{`[Maths]
-Relations and Functions: 6
-Matrices: 8
-Integrals: 12
-Vectors: 8
-
-[Physics]
-Electrostatics: 12
-Current Electricity: 8
-Ray Optics: 8
-
-[Chemistry]
-Solutions: 7
-Electrochemistry: 9
-Coordination Compounds: 7`}
-                </pre>
-              </div>
-
+            <div className="space-y-3">
               {parseError && (
-                <div className="p-3 bg-rose-950/50 border border-rose-800/60 rounded-xl text-xs text-rose-300 flex items-center gap-2">
+                <div className="p-2.5 bg-rose-950/40 border border-rose-800/50 rounded-xl text-xs text-rose-300 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
                   <span>{parseError}</span>
                 </div>
@@ -376,64 +329,59 @@ Coordination Compounds: 7`}
               <textarea
                 value={pasteText}
                 onChange={(e) => setPasteText(e.target.value)}
-                placeholder="Paste your lessons with marks here..."
-                rows={10}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-mono text-slate-200 focus:outline-none focus:border-indigo-500"
+                placeholder="[Maths]&#10;Relations and Functions: 6&#10;Matrices: 8&#10;&#10;[Physics]&#10;Current Electricity: 8"
+                rows={9}
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-xs font-mono text-zinc-200 focus:outline-none focus:border-zinc-600"
               />
 
               <button
                 onClick={handleParseAndApplyText}
-                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-medium transition shadow-md shadow-indigo-600/20"
+                className="w-full py-2 bg-zinc-100 hover:bg-white text-zinc-900 rounded-xl text-xs font-semibold transition shadow-sm"
               >
-                Parse & Populate Table
+                Parse & Populate
               </button>
             </div>
           )}
 
           {activeTab === 'upload' && (
-            <div className="space-y-4">
-              <div className="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 rounded-2xl p-8 text-center transition flex flex-col items-center justify-center">
-                <FileText className="w-10 h-10 text-indigo-400 mb-2" />
-                <h4 className="text-sm font-semibold text-slate-200">
-                  Upload Syllabus File (.txt, .json, .csv)
-                </h4>
-                <p className="text-xs text-slate-400 mt-1 max-w-sm">
-                  Upload a plain text syllabus outline or weightage table from your computer.
-                </p>
-                <label className="mt-4 cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-medium transition">
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>Choose File</span>
-                  <input
-                    type="file"
-                    accept=".txt,.json,.csv"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                </label>
-              </div>
+            <div className="border border-dashed border-zinc-800 rounded-xl p-8 text-center flex flex-col items-center justify-center">
+              <FileText className="w-8 h-8 text-zinc-500 mb-2" />
+              <h4 className="text-xs font-semibold text-zinc-200">
+                Upload Syllabus Outline (.txt, .json, .csv)
+              </h4>
+              <label className="mt-3 cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-zinc-100 hover:bg-white text-zinc-900 rounded-xl text-xs font-semibold transition">
+                <Upload className="w-3.5 h-3.5" />
+                <span>Choose File</span>
+                <input
+                  type="file"
+                  accept=".txt,.json,.csv"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </label>
             </div>
           )}
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between">
-          <div className="text-xs text-slate-400">
-            Total Lessons: {(draftSyllabus.Maths?.length || 0) + (draftSyllabus.Physics?.length || 0) + (draftSyllabus.Chemistry?.length || 0)}
+        <div className="p-3 border-t border-zinc-800 bg-zinc-950/80 flex items-center justify-between">
+          <div className="text-xs text-zinc-500">
+            Total: {(draftSyllabus.Maths?.length || 0) + (draftSyllabus.Physics?.length || 0) + (draftSyllabus.Chemistry?.length || 0)} lessons
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
+              className="px-3.5 py-1.5 rounded-lg text-xs text-zinc-400 hover:text-zinc-200"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-xs font-medium transition flex items-center gap-1.5 shadow-sm shadow-indigo-600/30"
+              className="px-4 py-1.5 bg-zinc-100 hover:bg-white disabled:opacity-50 text-zinc-900 rounded-lg text-xs font-semibold transition shadow-sm flex items-center gap-1.5"
             >
               <Check className="w-3.5 h-3.5" />
-              <span>{isSaving ? 'Saving...' : 'Save Syllabus Changes'}</span>
+              <span>{isSaving ? 'Saving...' : 'Save Syllabus'}</span>
             </button>
           </div>
         </div>

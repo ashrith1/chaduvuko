@@ -356,9 +356,9 @@ export const App: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 gap-3">
-        <div className="w-9 h-9 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs font-semibold tracking-wide text-slate-300">Loading {appSettings.appTitle}...</p>
+      <div className="min-h-screen bg-[#09090b] flex flex-col items-center justify-center text-zinc-400 gap-3">
+        <div className="w-7 h-7 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs font-medium tracking-tight text-zinc-300">Loading {appSettings.appTitle}...</p>
       </div>
     );
   }
@@ -369,7 +369,7 @@ export const App: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col selection:bg-zinc-700 selection:text-white">
       {/* Top Header */}
       <Header
         currentUser={currentUser}
@@ -386,7 +386,7 @@ export const App: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-3.5 sm:px-4 py-4 sm:py-6 pb-24 md:pb-8">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-3.5 sm:px-4 py-4 sm:py-5 pb-28 md:pb-8">
         {currentTab === 'daily' && (
           <DailyTargets
             currentUser={currentUser}

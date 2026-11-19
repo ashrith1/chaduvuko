@@ -68,13 +68,12 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
   }, [isRunning, mode]);
 
   const handleTimerFinish = async () => {
-    // Vibration for Android device
     if ('vibrate' in navigator) {
       navigator.vibrate([200, 100, 200, 100, 300]);
     }
 
     confetti({
-      particleCount: 70,
+      particleCount: 60,
       spread: 60,
       origin: { y: 0.6 }
     });
@@ -88,7 +87,6 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
 
   const handlePause = async () => {
     setIsRunning(false);
-    // If we were running stopwatch or countdown, offer to log the elapsed chunk
     if (mode === 'stopwatch' && stopwatchSeconds > 60 && activeTargetId) {
       await onLogTime(activeTargetId, stopwatchSeconds);
       setStopwatchSeconds(0);
@@ -104,7 +102,6 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
     }
   };
 
-  // Format time
   const currentSeconds = mode === 'countdown' ? timeLeft : stopwatchSeconds;
   const mins = Math.floor(currentSeconds / 60);
   const secs = currentSeconds % 60;
@@ -115,60 +112,59 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
     : 100;
 
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl max-w-lg mx-auto space-y-6">
+    <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-5 sm:p-6 shadow-sm max-w-md mx-auto space-y-5 backdrop-blur-sm">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-indigo-950 border border-indigo-800/80 flex items-center justify-center text-indigo-400">
-            <Clock className="w-4 h-4" />
+          <div className="w-7 h-7 rounded-lg bg-zinc-800 border border-zinc-700/60 flex items-center justify-center text-zinc-300">
+            <Clock className="w-3.5 h-3.5" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-slate-100">Study Focus Timer</h3>
-            <p className="text-[11px] text-slate-400">Stay locked in on your 12th board tasks</p>
+            <h3 className="text-sm font-semibold text-zinc-100">Study Focus Timer</h3>
+            <p className="text-[11px] text-zinc-400">Lock in on your daily chapter tasks</p>
           </div>
         </div>
 
         {completedSessions > 0 && (
-          <span className="flex items-center gap-1 text-[11px] font-semibold text-amber-400 bg-amber-950/60 border border-amber-800/60 px-2 py-0.5 rounded-full">
+          <span className="flex items-center gap-1 text-[11px] font-medium text-amber-400 bg-zinc-800 border border-zinc-750 px-2 py-0.5 rounded-full">
             <Sparkles className="w-3 h-3" />
-            {completedSessions} Pomodoros
+            {completedSessions} Sessions
           </span>
         )}
       </div>
 
-      {/* Target Selector Card (Attach Timer to Today's Target) */}
-      <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 space-y-1.5">
-        <div className="flex items-center justify-between text-[11px] text-slate-400">
-          <span className="font-medium">Assigned to Today's Task:</span>
+      {/* Target Selector Card */}
+      <div className="bg-zinc-950/60 border border-zinc-800/80 rounded-xl p-3 space-y-1.5">
+        <div className="flex items-center justify-between text-[11px] text-zinc-400">
+          <span className="font-medium">Focus Task:</span>
           {selectedTarget ? (
-            <span className="text-indigo-400 font-semibold">{selectedTarget.subject}</span>
+            <span className="text-zinc-200 font-medium">{selectedTarget.subject}</span>
           ) : (
-            <span className="text-slate-500">General Study</span>
+            <span className="text-zinc-500">General Session</span>
           )}
         </div>
 
         <select
           value={activeTargetId || ''}
           onChange={(e) => onSelectTarget(e.target.value || null)}
-          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+          className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-600"
         >
-          <option value="">General Study (No specific task)</option>
+          <option value="">General Study (No task attached)</option>
           {targets.map((t) => (
             <option key={t.id} value={t.id}>
               [{t.subject}] {t.chapterName ? `${t.chapterName} • ` : ''}
-              {t.questionCategory ? `${t.questionCategory} • ` : ''}
-              {t.task.slice(0, 35)}...
+              {t.task.slice(0, 32)}...
             </option>
           ))}
         </select>
 
         {selectedTarget && (
-          <div className="text-[11px] text-slate-400 pt-1 flex items-center gap-1.5">
-            <ChevronRight className="w-3 h-3 text-indigo-400" />
+          <div className="text-[11px] text-zinc-400 pt-1 flex items-center gap-1.5">
+            <ChevronRight className="w-3 h-3 text-zinc-500 shrink-0" />
             <span className="truncate">{selectedTarget.task}</span>
             {selectedTarget.timeSpentSeconds ? (
-              <span className="text-emerald-400 ml-auto shrink-0 font-medium">
-                ⏱️ {Math.round(selectedTarget.timeSpentSeconds / 60)}m logged
+              <span className="text-emerald-400 ml-auto shrink-0 font-medium text-[10px]">
+                {Math.round(selectedTarget.timeSpentSeconds / 60)}m logged
               </span>
             ) : null}
           </div>
@@ -176,29 +172,21 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
       </div>
 
       {/* Timer Display */}
-      <div className="flex flex-col items-center justify-center py-4 relative">
-        {/* Subtle radial backdrop glow */}
-        <div
-          className={`absolute w-48 h-48 rounded-full blur-3xl transition-opacity duration-700 pointer-events-none ${
-            isRunning ? 'bg-indigo-600/20 opacity-100' : 'bg-transparent opacity-0'
-          }`}
-        />
-
-        {/* Large time digits */}
-        <div className="relative text-6xl sm:text-7xl font-mono font-bold tracking-tight text-slate-100 tabular-nums">
+      <div className="flex flex-col items-center justify-center py-3">
+        <div className="text-6xl sm:text-7xl font-mono font-bold tracking-tight text-zinc-100 tabular-nums">
           {timeFormatted}
         </div>
 
-        {/* Progress indicator bar */}
-        <div className="w-48 h-1.5 bg-slate-800 rounded-full mt-4 overflow-hidden">
+        {/* Sleek thin progress indicator */}
+        <div className="w-44 h-1 bg-zinc-800 rounded-full mt-4 overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-indigo-500 to-sky-400 rounded-full transition-all duration-300"
+            className="h-full bg-zinc-200 rounded-full transition-all duration-300"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
 
-        <div className="text-xs text-slate-400 mt-2 font-medium">
-          {mode === 'countdown' ? `${initialMinutes} Min Session` : 'Stopwatch Running'}
+        <div className="text-xs text-zinc-400 mt-2 font-medium">
+          {mode === 'countdown' ? `${initialMinutes} min countdown` : 'Stopwatch active'}
         </div>
       </div>
 
@@ -213,10 +201,10 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
           <button
             key={preset.mins}
             onClick={() => handleSetPreset(preset.mins)}
-            className={`py-2 rounded-xl text-xs font-semibold border transition active:scale-95 ${
+            className={`py-1.5 rounded-xl text-xs font-medium border transition active:scale-95 ${
               mode === 'countdown' && initialMinutes === preset.mins
-                ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm shadow-indigo-600/30'
-                : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+                ? 'bg-zinc-100 text-zinc-900 border-white font-semibold'
+                : 'bg-zinc-900/60 text-zinc-400 border-zinc-800 hover:text-zinc-200'
             }`}
           >
             {preset.label}
@@ -227,24 +215,24 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
       <div className="flex items-center justify-center">
         <button
           onClick={handleSetStopwatch}
-          className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition ${
+          className={`px-3 py-1 rounded-lg text-xs font-medium border transition ${
             mode === 'stopwatch'
-              ? 'bg-indigo-600 text-white border-indigo-500'
-              : 'text-slate-400 hover:text-slate-200 border-transparent hover:border-slate-800'
+              ? 'bg-zinc-800 text-zinc-100 border-zinc-700'
+              : 'text-zinc-500 hover:text-zinc-300 border-transparent hover:border-zinc-800'
           }`}
         >
           Continuous Stopwatch
         </button>
       </div>
 
-      {/* Main Controls (Thumb-friendly touch targets) */}
-      <div className="flex items-center justify-center gap-4 pt-2">
+      {/* Main Controls */}
+      <div className="flex items-center justify-center gap-3 pt-1">
         <button
           onClick={handleReset}
-          className="w-12 h-12 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-200 active:scale-95 transition"
-          title="Reset Timer"
+          className="w-11 h-11 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-zinc-200 active:scale-95 transition"
+          title="Reset"
         >
-          <RotateCcw className="w-5 h-5" />
+          <RotateCcw className="w-4 h-4" />
         </button>
 
         <button
@@ -255,21 +243,21 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
               setIsRunning(true);
             }
           }}
-          className={`flex-1 max-w-[200px] h-14 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 shadow-lg transition active:scale-95 ${
+          className={`flex-1 max-w-[190px] h-12 rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition active:scale-95 ${
             isRunning
-              ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/20'
-              : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/30'
+              ? 'bg-amber-400 hover:bg-amber-300 text-zinc-950 font-bold'
+              : 'bg-zinc-100 hover:bg-white text-zinc-900 font-bold'
           }`}
         >
           {isRunning ? (
             <>
-              <Pause className="w-5 h-5 fill-current" />
+              <Pause className="w-4 h-4 fill-current" />
               <span>Pause Focus</span>
             </>
           ) : (
             <>
-              <Play className="w-5 h-5 fill-current" />
-              <span>Start Studying</span>
+              <Play className="w-4 h-4 fill-current" />
+              <span>Start Focus</span>
             </>
           )}
         </button>
@@ -278,14 +266,13 @@ export const StudyTimer: React.FC<StudyTimerProps> = ({
           <button
             onClick={async () => {
               if (activeTargetId) {
-                // Quick complete target
                 await onLogTime(activeTargetId, Math.max(300, (initialMinutes * 60 - timeLeft)));
               }
             }}
-            className="w-12 h-12 rounded-2xl bg-emerald-950/60 border border-emerald-800/60 flex items-center justify-center text-emerald-400 active:scale-95 transition"
+            className="w-11 h-11 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-emerald-400 active:scale-95 transition"
             title="Log Time & Complete Target"
           >
-            <Check className="w-5 h-5" />
+            <Check className="w-4 h-4" />
           </button>
         )}
       </div>
