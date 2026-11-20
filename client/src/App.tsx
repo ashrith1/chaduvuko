@@ -10,6 +10,7 @@ import { TargetModal } from './components/TargetModal';
 import { UserModal } from './components/UserModal';
 import { SyllabusEditorModal } from './components/SyllabusEditorModal';
 import { ManageUsersModal } from './components/ManageUsersModal';
+import { AboutModal } from './components/AboutModal';
 
 export const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -65,6 +66,7 @@ export const App: React.FC = () => {
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isManageUsersModalOpen, setIsManageUsersModalOpen] = useState(false);
   const [isEditorModalOpen, setIsEditorModalOpen] = useState(false);
+  const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
 
   // Fetch all initial data
   const loadData = useCallback(async () => {
@@ -381,6 +383,7 @@ export const App: React.FC = () => {
         onSelectUser={handleSelectUser}
         onOpenNewUserModal={() => setIsUserModalOpen(true)}
         onOpenManageUsersModal={() => setIsManageUsersModalOpen(true)}
+        onOpenAboutModal={() => setIsAboutModalOpen(true)}
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
       />
@@ -479,6 +482,14 @@ export const App: React.FC = () => {
         syllabus={syllabus}
         onSaveSyllabus={handleSaveSyllabus}
         onResetDefault={handleResetSyllabus}
+      />
+
+      {/* About Chaduvuko & Blueprint Modal */}
+      <AboutModal
+        isOpen={isAboutModalOpen}
+        onClose={() => setIsAboutModalOpen(false)}
+        appTitle={appSettings.appTitle}
+        appBadge={appSettings.appBadge}
       />
     </div>
   );
