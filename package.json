@@ -1,8 +1,9 @@
 {
-  "name": "class-12-study-group-tracker",
+  "name": "chaduvuko",
   "version": "1.0.0",
-  "description": "Minimal Daily Target & Board Exam Weightage Tracker for Class 12 Peers",
+  "description": "Chaduvuko (చదువుకో) — High-efficiency, mobile-first Study Group & Official Chapter Weightage Tracker built for Class 12 (BIEAP Andhra Pradesh Board) Intermediate students.",
   "main": "server/index.js",
+  "type": "module",
   "scripts": {
     "build": "npm --prefix client install && npm --prefix client run build && npm --prefix server install",
     "start": "node server/index.js",
@@ -10,6 +11,25 @@
     "client": "npm --prefix client run dev",
     "dev": "node start-dev.js"
   },
+  "keywords": [
+    "chaduvuko",
+    "study-group",
+    "bieap",
+    "andhra-pradesh-board",
+    "class-12",
+    "intermediate-2nd-year",
+    "weightage-tracker",
+    "syllabus-tracker",
+    "pomodoro-timer",
+    "maths-exercises",
+    "physics-blueprint",
+    "chemistry-blueprint",
+    "react19",
+    "pwa",
+    "peer-accountability"
+  ],
+  "author": "Chaduvuko Team",
+  "license": "MIT",
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.21.2"
