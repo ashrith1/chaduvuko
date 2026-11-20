@@ -330,6 +330,16 @@ export const ManageUsersModal: React.FC<ManageUsersModalProps> = ({
                 </div>
               </div>
 
+              {/* About Chaduvuko Info Card */}
+              <div className="bg-zinc-950/60 border border-zinc-800 rounded-xl p-3 space-y-1 text-xs">
+                <div className="text-[10px] text-zinc-400 uppercase tracking-wider font-semibold">
+                  About Chaduvuko
+                </div>
+                <p className="text-[11px] text-zinc-400 leading-relaxed">
+                  Tailored study group tracker designed for <strong>12th Class (BIEAP Andhra Pradesh Board)</strong>. Features official chapter marks weightage, exercise-based Maths planning, peer accountability, and an integrated study timer.
+                </p>
+              </div>
+
               <div className="pt-2 flex items-center justify-end gap-2 pb-safe">
                 <button
                   type="button"
