@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { User } from '../types';
-import { Flame, Users, Calendar, Plus, BookOpen, CheckSquare, Clock, Settings, Download, Check, X } from 'lucide-react';
+import { Flame, Users, Calendar, Plus, BookOpen, CheckSquare, Clock, Settings, Download, Check, X, Info } from 'lucide-react';
 
 interface HeaderProps {
   currentUser: User | null;
@@ -12,6 +12,7 @@ interface HeaderProps {
   onSelectUser: (user: User) => void;
   onOpenNewUserModal: () => void;
   onOpenManageUsersModal: () => void;
+  onOpenAboutModal?: () => void;
   selectedDate: string;
   onDateChange: (date: string) => void;
 }
@@ -26,6 +27,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectUser,
   onOpenNewUserModal,
   onOpenManageUsersModal,
+  onOpenAboutModal,
   selectedDate,
   onDateChange
 }) => {
@@ -191,7 +193,17 @@ export const Header: React.FC<HeaderProps> = ({
               ) : null}
             </button>
 
-            {/* Quick Settings Icon (Desktop) */}
+            {/* Quick About & Settings Icons (Desktop) */}
+            {onOpenAboutModal && (
+              <button
+                onClick={onOpenAboutModal}
+                className="hidden sm:flex p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-400 hover:text-zinc-200 transition"
+                title="About Chaduvuko & Blueprint"
+              >
+                <Info className="w-3.5 h-3.5" />
+              </button>
+            )}
+
             <button
               onClick={onOpenManageUsersModal}
               className="hidden sm:flex p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-400 hover:text-zinc-200 transition"
@@ -358,6 +370,21 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>Settings</span>
               </button>
             </div>
+
+            {/* About & Info Button */}
+            {onOpenAboutModal && (
+              <button
+                type="button"
+                onClick={() => {
+                  setUserDrawerOpen(false);
+                  onOpenAboutModal();
+                }}
+                className="w-full py-2 px-3 rounded-xl bg-zinc-850 hover:bg-zinc-800 border border-zinc-750 text-zinc-300 text-xs font-medium flex items-center justify-center gap-2 transition"
+              >
+                <Info className="w-3.5 h-3.5 text-indigo-400" />
+                <span>About Chaduvuko & Blueprint</span>
+              </button>
+            )}
 
             {/* Install App Link */}
             {!isInstalled && (
