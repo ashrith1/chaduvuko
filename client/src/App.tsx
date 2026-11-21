@@ -15,7 +15,6 @@ import { CalendarView } from './components/CalendarView';
 import { AdminMonitorView } from './components/AdminMonitorView';
 import { LoginModal } from './components/LoginModal';
 import { ShareReportModal } from './components/ShareReportModal';
-import { Shield } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
