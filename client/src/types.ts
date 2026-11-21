@@ -36,6 +36,8 @@ export interface User {
   streak: number;
   todayStudySeconds?: number;
   joinedAt: string;
+  role?: 'admin' | 'student';
+  pin?: string;
 }
 
 export interface Target {
@@ -83,4 +85,12 @@ export interface GroupOverview {
   groupAverageSyllabusRate: number; // 0 - 100%
   groupTodayStudyMinutes: number;
   members: MemberProgress[];
+}
+
+export interface CalendarDaySummary {
+  date: string; // YYYY-MM-DD
+  totalTargets: number;
+  completedTargets: number;
+  studyMinutes: number;
+  targets: Target[];
 }
