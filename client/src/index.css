@@ -83,3 +83,42 @@ button, a, input[type="checkbox"] {
 .animate-fade-in {
   animation: fadeIn 0.15s ease-out forwards;
 }
+
+/* Glassmorphism & Neon Glow Utilities */
+.glass-panel {
+  background: rgba(18, 18, 23, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.glass-card {
+  background: rgba(24, 24, 32, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.glow-maths {
+  box-shadow: 0 0 24px -6px rgba(168, 85, 247, 0.22);
+}
+
+.glow-physics {
+  box-shadow: 0 0 24px -6px rgba(56, 189, 248, 0.22);
+}
+
+.glow-chemistry {
+  box-shadow: 0 0 24px -6px rgba(52, 211, 153, 0.22);
+}
+
+.glow-amber {
+  box-shadow: 0 0 24px -6px rgba(245, 158, 11, 0.25);
+}
+
+/* Smooth tactile click feedback */
+.active-press {
+  transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.active-press:active {
+  transform: scale(0.96);
+}
