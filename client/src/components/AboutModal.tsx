@@ -10,8 +10,7 @@ import {
   Smartphone,
   CheckCircle2,
   Sparkles,
-  Layers,
-  HelpCircle
+  Layers
 } from 'lucide-react';
 
 interface AboutModalProps {
