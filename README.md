@@ -100,6 +100,32 @@ In conventional preparation, students encounter several critical friction points
 - **Member Management:** Add peers, customize avatars, or rename the study circle and board badge.
 - **In-App About Modal:** Click the `(i)` button in the header or user drawer anytime to review the BIEAP weightage breakdown and exam tips.
 
+### 8. 🔐 Individual User Accounts & PIN Security
+- **Account Isolation:** Each student has their own account and profile.
+- **Quick-PIN Verification:** Switch users securely with a 4-to-6 digit PIN pad. Default PIN is `1234` and can be customized at any time.
+- **Admin vs. Student Roles:** Ashrith is assigned the `Admin` role with supervisory privileges. Students have focused access without destructive administrative powers.
+
+### 9. 🛡️ Supervisor / Admin Monitoring Dashboard
+- **All-Member Audit:** Admin has dedicated access to the **Admin** tab to view all enrolled students at a glance.
+- **Performance Surveillance:** Monitor real-time daily completion rates, syllabus coverage %, total study minutes, active streaks, and recent targets for each peer.
+- **Remote Goal Assignment:** Assign specific chapter exercises or tasks directly to any student.
+- **Security & Account Control:** Reset student PINs or manage membership directly from the supervisor control panel.
+
+### 10. 📅 Interactive Study Calendar & Activity Heatmaps
+- **Historical Tracking:** Access the **Calendar** tab to view your entire study journey across weeks and months.
+- **Day-by-Day Activity Indicators:** Dates highlight study consistency with green indicators for completed days and amber badges for days with pending tasks.
+- **Day Inspector:** Tap any past or upcoming day to view the exact subjects studied, exercises completed, and time logged.
+- **Carry-Over Unfinished Tasks:** One-tap action to push missed goals to today with date rescheduling.
+
+### 11. 📲 WhatsApp Daily Study Report Generator
+- **One-Click Share:** Tap the Share icon (`Share2`) in the top navigation bar to generate an instant daily progress summary.
+- **Formatted for Parents & Mentors:** Beautifully formatted text with completed exercises, questions solved, total focus hours, and current streak.
+- **Direct WhatsApp Dispatch:** Send directly via WhatsApp Web / App or copy to clipboard in one tap.
+
+### 12. ☁️ Cloud Persistence with Turso (LibSQL)
+- **Zero Data Loss:** All targets, syllabus progress, study sessions, and users are stored in a distributed Turso Cloud database (`libsql://chaduvuko-ashrith1.aws-ap-south-1.turso.io`).
+- **Resilient Fallback:** Automatically falls back to local storage if offline or during network outages.
+
 ---
 
 ## 📐 BIEAP Exam Blueprint & Chapter Weightages
