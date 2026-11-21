@@ -1,18 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import type { User } from '../types';
-import { Flame, Users, Calendar, Plus, BookOpen, CheckSquare, Clock, Settings, Download, Check, X, Info } from 'lucide-react';
+import {
+  Flame,
+  Users,
+  Calendar as CalendarIcon,
+  Plus,
+  BookOpen,
+  CheckSquare,
+  Clock,
+  Settings,
+  Download,
+  Check,
+  X,
+  Info,
+  Shield,
+  Share2,
+  Lock,
+  LogOut
+} from 'lucide-react';
 
 interface HeaderProps {
   currentUser: User | null;
   users: User[];
-  currentTab: 'daily' | 'group' | 'syllabus' | 'timer';
+  currentTab: 'daily' | 'group' | 'syllabus' | 'timer' | 'calendar' | 'admin';
   appTitle?: string;
   appBadge?: string;
-  onTabChange: (tab: 'daily' | 'group' | 'syllabus' | 'timer') => void;
+  onTabChange: (tab: 'daily' | 'group' | 'syllabus' | 'timer' | 'calendar' | 'admin') => void;
   onSelectUser: (user: User) => void;
   onOpenNewUserModal: () => void;
   onOpenManageUsersModal: () => void;
   onOpenAboutModal?: () => void;
+  onOpenLoginModal?: (targetUser?: User | null) => void;
+  onOpenShareModal?: () => void;
   selectedDate: string;
   onDateChange: (date: string) => void;
 }
@@ -28,6 +47,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenNewUserModal,
   onOpenManageUsersModal,
   onOpenAboutModal,
+  onOpenLoginModal,
+  onOpenShareModal,
   selectedDate,
   onDateChange
 }) => {
@@ -72,9 +93,15 @@ export const Header: React.FC<HeaderProps> = ({
 
   const handleSwitchUser = (user: User) => {
     if ('vibrate' in navigator) navigator.vibrate(25);
-    onSelectUser(user);
     setUserDrawerOpen(false);
+    if (onOpenLoginModal && user.id !== currentUser?.id) {
+      onOpenLoginModal(user);
+    } else {
+      onSelectUser(user);
+    }
   };
+
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.id === 'u-1';
 
   // Format date display (e.g. "Today" or "Nov 19")
   const todayStr = new Date().toISOString().split('T')[0];
@@ -159,13 +186,39 @@ export const Header: React.FC<HeaderProps> = ({
               <BookOpen className="w-3.5 h-3.5" />
               <span>Syllabus</span>
             </button>
+
+            <button
+              onClick={() => onTabChange('calendar')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                currentTab === 'calendar'
+                  ? 'bg-zinc-800 text-zinc-100 shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <CalendarIcon className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Calendar</span>
+            </button>
+
+            {isAdmin && (
+              <button
+                onClick={() => onTabChange('admin')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                  currentTab === 'admin'
+                    ? 'bg-amber-500/20 text-amber-200 border border-amber-500/40 shadow-sm'
+                    : 'text-amber-400/80 hover:text-amber-300'
+                }`}
+              >
+                <Shield className="w-3.5 h-3.5 text-amber-400" />
+                <span>Admin</span>
+              </button>
+            )}
           </div>
 
           {/* Right Section: Date & User Profile */}
           <div className="flex items-center gap-2">
             {/* Minimal Date Pill */}
             <label className="flex items-center gap-1.5 bg-zinc-900/80 hover:bg-zinc-850 border border-zinc-800 hover:border-zinc-700 px-2.5 py-1.5 rounded-lg text-xs text-zinc-300 cursor-pointer transition">
-              <Calendar className="w-3 h-3 text-zinc-400 shrink-0" />
+              <CalendarIcon className="w-3 h-3 text-zinc-400 shrink-0" />
               <span className="font-medium text-[11px] sm:text-xs">{formattedDate}</span>
               <input
                 type="date"
@@ -174,6 +227,17 @@ export const Header: React.FC<HeaderProps> = ({
                 className="opacity-0 absolute w-0 h-0 pointer-events-none"
               />
             </label>
+
+            {/* Quick Share Report Icon */}
+            {onOpenShareModal && (
+              <button
+                onClick={onOpenShareModal}
+                className="p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-400 hover:text-zinc-200 transition"
+                title="Share Today's Study Report (WhatsApp)"
+              >
+                <Share2 className="w-3.5 h-3.5 text-emerald-400" />
+              </button>
+            )}
 
             {/* User Profile Pill / Button */}
             <button
@@ -276,6 +340,38 @@ export const Header: React.FC<HeaderProps> = ({
           <BookOpen className="w-4 h-4" />
           {currentTab === 'syllabus' && <span>Syllabus</span>}
         </button>
+
+        <button
+          onClick={() => {
+            if ('vibrate' in navigator) navigator.vibrate(15);
+            onTabChange('calendar');
+          }}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all duration-200 ${
+            currentTab === 'calendar'
+              ? 'bg-zinc-800 text-zinc-100 font-medium shadow-sm'
+              : 'text-zinc-400 hover:text-zinc-200'
+          }`}
+        >
+          <CalendarIcon className="w-4 h-4 text-indigo-400" />
+          {currentTab === 'calendar' && <span>Calendar</span>}
+        </button>
+
+        {isAdmin && (
+          <button
+            onClick={() => {
+              if ('vibrate' in navigator) navigator.vibrate(15);
+              onTabChange('admin');
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all duration-200 ${
+              currentTab === 'admin'
+                ? 'bg-amber-500/20 text-amber-200 font-medium shadow-sm border border-amber-500/30'
+                : 'text-amber-400/80 hover:text-amber-300'
+            }`}
+          >
+            <Shield className="w-4 h-4 text-amber-400" />
+            {currentTab === 'admin' && <span>Admin</span>}
+          </button>
+        )}
       </nav>
 
       {/* MINIMAL USER DRAWER / BOTTOM SHEET */}
@@ -325,8 +421,13 @@ export const Header: React.FC<HeaderProps> = ({
                         {u.avatar}
                       </span>
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           <span className="font-semibold text-xs sm:text-sm text-zinc-100">{u.name}</span>
+                          {(u.role === 'admin' || u.id === 'u-1') && (
+                            <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.2 rounded font-semibold flex items-center gap-0.5">
+                              <Shield className="w-2.5 h-2.5" /> Admin
+                            </span>
+                          )}
                           {isSelected && (
                             <span className="text-[10px] bg-zinc-700 text-zinc-200 px-1.5 py-0.2 rounded font-medium">
                               Active
@@ -369,6 +470,37 @@ export const Header: React.FC<HeaderProps> = ({
                 <Settings className="w-3.5 h-3.5" />
                 <span>Settings</span>
               </button>
+            </div>
+
+            {/* Quick Share & Lock Buttons */}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              {onOpenShareModal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUserDrawerOpen(false);
+                    onOpenShareModal();
+                  }}
+                  className="py-2 px-3 rounded-xl bg-zinc-850 hover:bg-zinc-800 border border-zinc-750 text-emerald-300 font-medium flex items-center justify-center gap-1.5 transition active:scale-95"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>Share Report</span>
+                </button>
+              )}
+
+              {onOpenLoginModal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUserDrawerOpen(false);
+                    onOpenLoginModal(null);
+                  }}
+                  className="py-2 px-3 rounded-xl bg-zinc-850 hover:bg-zinc-800 border border-zinc-750 text-zinc-300 font-medium flex items-center justify-center gap-1.5 transition active:scale-95"
+                >
+                  <Lock className="w-3.5 h-3.5 text-zinc-400" />
+                  <span>Switch / PIN</span>
+                </button>
+              )}
             </div>
 
             {/* About & Info Button */}
