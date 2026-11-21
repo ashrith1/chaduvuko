@@ -14,6 +14,7 @@ interface DailyTargetsProps {
   onNavigateToSyllabus: () => void;
   onStartTimerForTarget: (targetId: string) => void;
   onSelectUser?: (user: User) => void;
+  onRescheduleTarget?: (id: string, newDate: string) => void;
 }
 
 const SUBJECT_CONFIG: Record<
@@ -51,7 +52,8 @@ export const DailyTargets: React.FC<DailyTargetsProps> = ({
   onOpenAddModal,
   onNavigateToSyllabus,
   onStartTimerForTarget,
-  onSelectUser
+  onSelectUser,
+  onRescheduleTarget
 }) => {
   const subjects: SubjectType[] = ['Maths', 'Physics', 'Chemistry'];
 
@@ -62,6 +64,11 @@ export const DailyTargets: React.FC<DailyTargetsProps> = ({
   // Filter targets for current user and date
   const userTargets = targets.filter(
     (t) => t.userId === currentUser?.id && t.date === selectedDate
+  );
+
+  // Pending targets from previous days
+  const pendingPreviousTargets = targets.filter(
+    (t) => t.userId === currentUser?.id && !t.completed && t.date < selectedDate
   );
 
   const targetsBySubject = subjects.reduce((acc, sub) => {
@@ -249,6 +256,27 @@ export const DailyTargets: React.FC<DailyTargetsProps> = ({
           })}
         </div>
       </div>
+
+      {/* Unfinished Previous Targets Banner */}
+      {pendingPreviousTargets.length > 0 && (
+        <div className="bg-amber-950/40 border border-amber-800/60 rounded-2xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs animate-fade-in shadow-sm">
+          <div className="flex items-center gap-2 text-amber-300">
+            <Clock className="w-4 h-4 shrink-0 text-amber-400" />
+            <span>
+              You have <strong className="text-amber-200">{pendingPreviousTargets.length}</strong> unfinished goal(s) from earlier days.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              pendingPreviousTargets.forEach((t) => onRescheduleTarget?.(t.id, selectedDate));
+            }}
+            className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 rounded-xl font-medium text-xs whitespace-nowrap transition active:scale-95"
+          >
+            Carry Over to Today &rarr;
+          </button>
+        </div>
+      )}
 
       {/* 3 Subject Columns / Clean Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
