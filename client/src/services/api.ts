@@ -75,7 +75,9 @@ export const api = {
       } catch (e) {}
     }
     return [
-      { id: 'u-1', name: 'Ashrith', avatar: '🚀', targetScore: '95%+', status: 'Ready to study', streak: 4, todayStudySeconds: 1500, joinedAt: new Date().toISOString() }
+      { id: 'u-1', name: 'Ashrith', avatar: '🚀', targetScore: '95%+', status: 'Ready to study', streak: 4, todayStudySeconds: 1500, joinedAt: new Date().toISOString(), role: 'admin', pin: '1234' },
+      { id: 'u-2', name: 'Rohan', avatar: '⚡', targetScore: '90%+', status: 'Focusing on Integrals', streak: 2, todayStudySeconds: 1200, joinedAt: new Date().toISOString(), role: 'student', pin: '1234' },
+      { id: 'u-3', name: 'Priya', avatar: '📚', targetScore: '98%+', status: 'Reviewing Ray Optics', streak: 5, todayStudySeconds: 2400, joinedAt: new Date().toISOString(), role: 'student', pin: '1234' }
     ];
   },
 
