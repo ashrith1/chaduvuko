@@ -16,6 +16,7 @@ import { AdminMonitorView } from './components/AdminMonitorView';
 import { LoginModal } from './components/LoginModal';
 import { ShareReportModal } from './components/ShareReportModal';
 import { LoginPage } from './components/LoginPage';
+import { BottomNav } from './components/BottomNav';
 
 export const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -507,7 +508,6 @@ export const App: React.FC = () => {
         {currentTab === 'daily' && (
           <DailyTargets
             currentUser={currentUser}
-            users={users}
             selectedDate={selectedDate}
             targets={targets}
             onToggleTarget={handleToggleTarget}
@@ -519,7 +519,6 @@ export const App: React.FC = () => {
             }}
             onNavigateToSyllabus={() => handleTabChange('syllabus')}
             onStartTimerForTarget={handleStartTimerForTarget}
-            onSelectUser={handleSelectUser}
             onRescheduleTarget={handleRescheduleTarget}
           />
         )}
@@ -589,6 +588,13 @@ export const App: React.FC = () => {
           />
         )}
       </main>
+
+      {/* Floating Bottom Nav for Mobile */}
+      <BottomNav
+        currentTab={currentTab}
+        onTabChange={handleTabChange}
+        currentUser={currentUser}
+      />
 
       {/* Target Modal */}
       <TargetModal
