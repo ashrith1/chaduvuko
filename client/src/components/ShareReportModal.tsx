@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { User, Target } from '../types';
-import { Share2, Copy, Check, MessageSquare, X, Flame, Clock, Award } from 'lucide-react';
+import { Share2, Copy, Check, MessageSquare, X } from 'lucide-react';
 
 interface ShareReportModalProps {
   isOpen: boolean;
