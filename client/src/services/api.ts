@@ -394,7 +394,6 @@ export const api = {
     const completedCount = todayTargets.filter((t) => t.completed).length;
 
     return {
-      success: true,
       today,
       totalSubjectMarks: { Maths: 126, Physics: 106, Chemistry: 110 },
       grandTotalMarks: 342,
