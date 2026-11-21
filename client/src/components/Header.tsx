@@ -15,8 +15,7 @@ import {
   Info,
   Shield,
   Share2,
-  Lock,
-  LogOut
+  Lock
 } from 'lucide-react';
 
 interface HeaderProps {
