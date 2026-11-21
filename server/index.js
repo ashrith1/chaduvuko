@@ -29,7 +29,9 @@ function mapUserRow(row) {
     status: row.status || 'Ready to study',
     streak: Number(row.streak) || 1,
     todayStudySeconds: Number(row.today_study_seconds) || 0,
-    joinedAt: row.joined_at
+    joinedAt: row.joined_at,
+    role: row.role || 'student',
+    pin: row.pin || '1234'
   };
 }
 
@@ -230,6 +232,146 @@ app.delete('/api/users/:id', async (req, res) => {
     await db.execute({ sql: 'DELETE FROM users WHERE id = ?', args: [id] });
 
     res.json({ success: true, removedUser });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// User Login with PIN verification
+app.post('/api/login', async (req, res) => {
+  try {
+    const { userId, pin } = req.body;
+    if (!userId) return res.status(400).json({ error: 'User ID is required' });
+
+    const userRes = await db.execute({ sql: 'SELECT * FROM users WHERE id = ?', args: [userId] });
+    if (userRes.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+
+    const user = mapUserRow(userRes.rows[0]);
+    if (user.pin && pin !== user.pin) {
+      return res.status(401).json({ error: 'Incorrect PIN. Default PIN is 1234.' });
+    }
+
+    res.json({ success: true, user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update PIN
+app.patch('/api/users/:id/pin', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { pin } = req.body;
+    if (!pin || String(pin).trim().length < 4) {
+      return res.status(400).json({ error: 'PIN must be at least 4 digits' });
+    }
+
+    await db.execute({
+      sql: 'UPDATE users SET pin = ? WHERE id = ?',
+      args: [String(pin).trim(), id]
+    });
+
+    res.json({ success: true, message: 'PIN updated successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Calendar History for a specific user
+app.get('/api/calendar/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const targetsRes = await db.execute({
+      sql: 'SELECT * FROM targets WHERE user_id = ? ORDER BY date DESC',
+      args: [userId]
+    });
+    const targets = targetsRes.rows.map(mapTargetRow);
+
+    const byDate = {};
+    for (const t of targets) {
+      if (!byDate[t.date]) {
+        byDate[t.date] = {
+          date: t.date,
+          totalTargets: 0,
+          completedTargets: 0,
+          studyMinutes: 0,
+          targets: []
+        };
+      }
+      byDate[t.date].totalTargets += 1;
+      if (t.completed) byDate[t.date].completedTargets += 1;
+      byDate[t.date].studyMinutes += Math.round((t.timeSpentSeconds || 0) / 60);
+      byDate[t.date].targets.push(t);
+    }
+
+    const days = Object.values(byDate).sort((a, b) => b.date.localeCompare(a.date));
+    res.json({ success: true, days });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin Monitoring Overview (Comprehensive Audit across all days and members)
+app.get('/api/admin/overview', async (req, res) => {
+  try {
+    const usersRes = await db.execute('SELECT * FROM users ORDER BY rowid ASC');
+    const users = usersRes.rows.map(mapUserRow);
+
+    const targetsRes = await db.execute('SELECT * FROM targets ORDER BY date DESC');
+    const allTargets = targetsRes.rows.map(mapTargetRow);
+
+    const progressRes = await db.execute('SELECT * FROM chapter_progress');
+    const progressByUser = {};
+    for (const p of progressRes.rows) {
+      if (!progressByUser[p.user_id]) progressByUser[p.user_id] = {};
+      progressByUser[p.user_id][p.chapter_id] = { status: p.status, updatedAt: p.updated_at };
+    }
+
+    const syllabus = await getActiveSyllabus();
+    const grandTotalMarks =
+      (syllabus.Maths || []).reduce((a, c) => a + (Number(c.weightage) || 0), 0) +
+      (syllabus.Physics || []).reduce((a, c) => a + (Number(c.weightage) || 0), 0) +
+      (syllabus.Chemistry || []).reduce((a, c) => a + (Number(c.weightage) || 0), 0);
+
+    const auditMembers = users.map((u) => {
+      const userTargets = allTargets.filter((t) => t.userId === u.id);
+      const completedTotal = userTargets.filter((t) => t.completed).length;
+      const totalStudySeconds = userTargets.reduce((acc, t) => acc + (t.timeSpentSeconds || 0), u.todayStudySeconds || 0);
+
+      // Unique days studied
+      const activeDates = Array.from(new Set(userTargets.map((t) => t.date)));
+
+      const userProg = progressByUser[u.id] || {};
+      let completedWeightage = 0;
+      ['Maths', 'Physics', 'Chemistry'].forEach((sub) => {
+        (syllabus[sub] || []).forEach((chap) => {
+          if (userProg[chap.id]?.status === 'completed' || userProg[chap.id]?.status === 'revised') {
+            completedWeightage += Number(chap.weightage) || 0;
+          } else if (userProg[chap.id]?.status === 'in_progress') {
+            completedWeightage += (Number(chap.weightage) || 0) * 0.4;
+          }
+        });
+      });
+
+      const syllabusRate = grandTotalMarks > 0 ? Math.round((completedWeightage / grandTotalMarks) * 100) : 0;
+
+      return {
+        ...u,
+        totalLifetimeTargets: userTargets.length,
+        completedLifetimeTargets: completedTotal,
+        activeDaysCount: activeDates.length,
+        totalStudyHours: Number((totalStudySeconds / 3600).toFixed(1)),
+        syllabusCompletionRate: syllabusRate,
+        recentTargets: userTargets.slice(0, 5)
+      };
+    });
+
+    res.json({
+      success: true,
+      totalUsers: users.length,
+      grandTotalMarks,
+      auditMembers
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
