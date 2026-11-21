@@ -11,18 +11,23 @@ import { UserModal } from './components/UserModal';
 import { SyllabusEditorModal } from './components/SyllabusEditorModal';
 import { ManageUsersModal } from './components/ManageUsersModal';
 import { AboutModal } from './components/AboutModal';
+import { CalendarView } from './components/CalendarView';
+import { AdminMonitorView } from './components/AdminMonitorView';
+import { LoginModal } from './components/LoginModal';
+import { ShareReportModal } from './components/ShareReportModal';
+import { Shield } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
-  const [currentTab, setCurrentTab] = useState<'daily' | 'group' | 'syllabus' | 'timer'>(() => {
+  const [currentTab, setCurrentTab] = useState<'daily' | 'group' | 'syllabus' | 'timer' | 'calendar' | 'admin'>(() => {
     const hash = window.location.hash.replace('#', '');
-    if (['daily', 'group', 'syllabus', 'timer'].includes(hash)) {
+    if (['daily', 'group', 'syllabus', 'timer', 'calendar', 'admin'].includes(hash)) {
       return hash as any;
     }
     return 'daily';
   });
 
-  const handleTabChange = (tab: 'daily' | 'group' | 'syllabus' | 'timer') => {
+  const handleTabChange = (tab: 'daily' | 'group' | 'syllabus' | 'timer' | 'calendar' | 'admin') => {
     setCurrentTab(tab);
     window.location.hash = tab;
   };
@@ -30,7 +35,7 @@ export const App: React.FC = () => {
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash.replace('#', '');
-      if (['daily', 'group', 'syllabus', 'timer'].includes(hash)) {
+      if (['daily', 'group', 'syllabus', 'timer', 'calendar', 'admin'].includes(hash)) {
         setCurrentTab(hash as any);
       }
     };
@@ -67,22 +72,30 @@ export const App: React.FC = () => {
   const [isManageUsersModalOpen, setIsManageUsersModalOpen] = useState(false);
   const [isEditorModalOpen, setIsEditorModalOpen] = useState(false);
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [loginTargetUser, setLoginTargetUser] = useState<User | null>(null);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [adminOverview, setAdminOverview] = useState<any>(null);
 
   // Fetch all initial data
   const loadData = useCallback(async () => {
     try {
-      const [fetchedSyllabus, fetchedUsers, fetchedTargets, fetchedOverview, fetchedSettings] = await Promise.all([
+      const [fetchedSyllabus, fetchedUsers, fetchedTargets, fetchedOverview, fetchedSettings, fetchedAdminOverview] = await Promise.all([
         api.getSyllabus(),
         api.getUsers(),
         api.getTargets(), // Load all targets so past pending targets are accessible
         api.getGroupOverview(selectedDate),
-        api.getSettings().catch(() => ({ appTitle: '12th Prep', appBadge: 'BIEAP State Board' }))
+        api.getSettings().catch(() => ({ appTitle: '12th Prep', appBadge: 'BIEAP State Board' })),
+        api.getAdminOverview().catch(() => null)
       ]);
 
       setSyllabus(fetchedSyllabus);
       setUsers(fetchedUsers);
       setTargets(fetchedTargets);
       setGroupOverview(fetchedOverview);
+      if (fetchedAdminOverview) {
+        setAdminOverview(fetchedAdminOverview);
+      }
       if (fetchedSettings?.appTitle) {
         setAppSettings(fetchedSettings);
         document.title = `${fetchedSettings.appTitle} | ${fetchedSettings.appBadge}`;
@@ -112,12 +125,14 @@ export const App: React.FC = () => {
   useEffect(() => {
     const timer = setInterval(async () => {
       try {
-        const [fetchedTargets, fetchedOverview] = await Promise.all([
+        const [fetchedTargets, fetchedOverview, fetchedAdminOverview] = await Promise.all([
           api.getTargets(),
-          api.getGroupOverview(selectedDate)
+          api.getGroupOverview(selectedDate),
+          api.getAdminOverview().catch(() => null)
         ]);
         setTargets(fetchedTargets);
         setGroupOverview(fetchedOverview);
+        if (fetchedAdminOverview) setAdminOverview(fetchedAdminOverview);
       } catch (e) {
         // silent
       }
@@ -125,7 +140,7 @@ export const App: React.FC = () => {
     return () => clearInterval(timer);
   }, [selectedDate]);
 
-  // Active user change
+  // Active user change & authentication
   const handleSelectUser = async (user: User) => {
     setCurrentUser(user);
     api.setCurrentUserId(user.id);
@@ -135,6 +150,31 @@ export const App: React.FC = () => {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const handleOpenLoginModal = (targetUser?: User | null) => {
+    setLoginTargetUser(targetUser || null);
+    setIsLoginModalOpen(true);
+  };
+
+  const handleLoginSuccess = async (user: User) => {
+    await handleSelectUser(user);
+  };
+
+  const handleUpdatePin = async (userId: string, pin: string) => {
+    await api.updatePin(userId, pin);
+    setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, pin } : u)));
+    if (currentUser?.id === userId) {
+      setCurrentUser((prev) => (prev ? { ...prev, pin } : null));
+    }
+  };
+
+  const handleAssignTargetToUser = (user: User) => {
+    setCurrentUser(user);
+    api.setCurrentUserId(user.id);
+    setTargetModalSubject('Maths');
+    setTargetModalChapter(null);
+    setIsTargetModalOpen(true);
   };
 
   // Target handlers
@@ -398,6 +438,8 @@ export const App: React.FC = () => {
         onOpenNewUserModal={() => setIsUserModalOpen(true)}
         onOpenManageUsersModal={() => setIsManageUsersModalOpen(true)}
         onOpenAboutModal={() => setIsAboutModalOpen(true)}
+        onOpenLoginModal={handleOpenLoginModal}
+        onOpenShareModal={() => setIsShareModalOpen(true)}
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
       />
@@ -431,6 +473,40 @@ export const App: React.FC = () => {
               activeTargetId={activeTimerTargetId}
               onSelectTarget={setActiveTimerTargetId}
               onLogTime={handleLogTimer}
+            />
+          </div>
+        )}
+
+        {currentTab === 'calendar' && (
+          <div className="py-2 animate-fade-in">
+            <CalendarView
+              currentUser={currentUser}
+              targets={targets}
+              selectedDate={selectedDate}
+              onSelectDate={(d) => {
+                setSelectedDate(d);
+              }}
+              onNavigateToDaily={() => handleTabChange('daily')}
+            />
+          </div>
+        )}
+
+        {currentTab === 'admin' && (
+          <div className="py-2 animate-fade-in">
+            <AdminMonitorView
+              currentUser={currentUser}
+              users={users}
+              auditMembers={adminOverview?.members || []}
+              onOpenAddUserModal={() => setIsUserModalOpen(true)}
+              onOpenBroadcastModal={() => {
+                setTargetModalSubject('Maths');
+                setTargetModalChapter(null);
+                setIsTargetModalOpen(true);
+              }}
+              onOpenSyllabusEditor={() => setIsEditorModalOpen(true)}
+              onDeleteUser={handleDeleteUser}
+              onUpdatePin={handleUpdatePin}
+              onAssignTargetToUser={handleAssignTargetToUser}
             />
           </div>
         )}
@@ -505,6 +581,24 @@ export const App: React.FC = () => {
         onClose={() => setIsAboutModalOpen(false)}
         appTitle={appSettings.appTitle}
         appBadge={appSettings.appBadge}
+      />
+
+      {/* Login & PIN Modal */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        users={users}
+        onLoginSuccess={handleLoginSuccess}
+        targetUser={loginTargetUser}
+      />
+
+      {/* Share Report Modal */}
+      <ShareReportModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        currentUser={currentUser}
+        selectedDate={selectedDate}
+        targets={targets}
       />
     </div>
   );
