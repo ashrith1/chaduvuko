@@ -10,4 +10,10 @@ client/dist
 .DS_Store
 Thumbs.db
 *.log
+
+# Environment variables & local DB files
 .env
+.env.local
+server/.env
+*.db
+server/data/*.db
