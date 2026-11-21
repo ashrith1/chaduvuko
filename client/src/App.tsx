@@ -74,7 +74,7 @@ export const App: React.FC = () => {
       const [fetchedSyllabus, fetchedUsers, fetchedTargets, fetchedOverview, fetchedSettings] = await Promise.all([
         api.getSyllabus(),
         api.getUsers(),
-        api.getTargets(selectedDate),
+        api.getTargets(), // Load all targets so past pending targets are accessible
         api.getGroupOverview(selectedDate),
         api.getSettings().catch(() => ({ appTitle: '12th Prep', appBadge: 'BIEAP State Board' }))
       ]);
@@ -113,7 +113,7 @@ export const App: React.FC = () => {
     const timer = setInterval(async () => {
       try {
         const [fetchedTargets, fetchedOverview] = await Promise.all([
-          api.getTargets(selectedDate),
+          api.getTargets(),
           api.getGroupOverview(selectedDate)
         ]);
         setTargets(fetchedTargets);
@@ -180,6 +180,20 @@ export const App: React.FC = () => {
       setGroupOverview(updatedOverview);
     } catch (e) {
       console.error('Error deleting target:', e);
+      loadData();
+    }
+  };
+
+  const handleRescheduleTarget = async (id: string, newDate: string) => {
+    try {
+      setTargets((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, date: newDate } : t))
+      );
+      await api.rescheduleTarget(id, newDate);
+      const updatedOverview = await api.getGroupOverview(selectedDate);
+      setGroupOverview(updatedOverview);
+    } catch (e) {
+      console.error('Error rescheduling target:', e);
       loadData();
     }
   };
@@ -406,6 +420,7 @@ export const App: React.FC = () => {
             onNavigateToSyllabus={() => handleTabChange('syllabus')}
             onStartTimerForTarget={handleStartTimerForTarget}
             onSelectUser={handleSelectUser}
+            onRescheduleTarget={handleRescheduleTarget}
           />
         )}
 
