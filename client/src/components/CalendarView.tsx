@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import type { Target, User } from '../types';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, CheckCircle2, Clock, BookOpen, Flame, Award, ArrowRight } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, CheckCircle2, Clock, ArrowRight } from 'lucide-react';
 
 interface CalendarViewProps {
   currentUser: User | null;
