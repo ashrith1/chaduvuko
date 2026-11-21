@@ -1,17 +1,12 @@
 import React, { useState } from 'react';
-import type { User, SubjectType, Chapter } from '../types';
+import type { User } from '../types';
 import {
   Shield,
   Users,
-  Clock,
-  CheckCircle2,
   Plus,
-  KeyRound,
   Trash2,
   Send,
-  Eye,
   BookOpen,
-  Award,
   Flame,
   X
 } from 'lucide-react';
