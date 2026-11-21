@@ -48,7 +48,9 @@ export async function initDatabase() {
       status TEXT DEFAULT 'Ready to study',
       streak INTEGER DEFAULT 1,
       today_study_seconds INTEGER DEFAULT 0,
-      joined_at TEXT NOT NULL
+      joined_at TEXT NOT NULL,
+      role TEXT DEFAULT 'student',
+      pin TEXT DEFAULT '1234'
     );
 
     CREATE TABLE IF NOT EXISTS targets (
