@@ -3,6 +3,10 @@ import type { SyllabusData, Target, User, GroupOverview, ChapterStatus } from '.
 const API_BASE = '/api';
 
 const LOCAL_STORAGE_KEY_USER = 'study_tracker_current_user_id';
+const LOCAL_STORAGE_KEY_TARGETS = 'chaduvuko_cached_targets';
+const LOCAL_STORAGE_KEY_PROGRESS = 'chaduvuko_cached_progress';
+const LOCAL_STORAGE_KEY_USERS = 'chaduvuko_cached_users';
+const LOCAL_STORAGE_KEY_SETTINGS = 'chaduvuko_cached_settings';
 
 export const api = {
   getCurrentUserId(): string {
@@ -14,13 +18,27 @@ export const api = {
   },
 
   async getSyllabus(): Promise<SyllabusData> {
-    const res = await fetch(`${API_BASE}/syllabus`);
-    if (!res.ok) throw new Error('Network error');
-    const data = await res.json();
-    return data.syllabus;
+    try {
+      const res = await fetch(`${API_BASE}/syllabus`);
+      if (res.ok) {
+        const data = await res.json();
+        return data.syllabus;
+      }
+    } catch (e) {
+      console.warn('Network offline or backend unreachable, using cached syllabus');
+    }
+    // Fallback if backend offline
+    const cached = localStorage.getItem('chaduvuko_cached_syllabus');
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (e) {}
+    }
+    return { Maths: [], Physics: [], Chemistry: [] };
   },
 
   async updateSyllabus(syllabus: SyllabusData): Promise<SyllabusData> {
+    localStorage.setItem('chaduvuko_cached_syllabus', JSON.stringify(syllabus));
     const res = await fetch(`${API_BASE}/syllabus`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -35,152 +53,367 @@ export const api = {
     const res = await fetch(`${API_BASE}/syllabus/reset`, { method: 'POST' });
     if (!res.ok) throw new Error('Failed to reset syllabus');
     const data = await res.json();
+    localStorage.setItem('chaduvuko_cached_syllabus', JSON.stringify(data.syllabus));
     return data.syllabus;
   },
 
   async getUsers(): Promise<User[]> {
-    const res = await fetch(`${API_BASE}/users`);
-    if (!res.ok) throw new Error('Failed to fetch users');
-    const data = await res.json();
-    return data.users;
+    try {
+      const res = await fetch(`${API_BASE}/users`);
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem(LOCAL_STORAGE_KEY_USERS, JSON.stringify(data.users));
+        return data.users;
+      }
+    } catch (e) {
+      console.warn('Backend unreachable, reading users from localStorage fallback');
+    }
+    const cached = localStorage.getItem(LOCAL_STORAGE_KEY_USERS);
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (e) {}
+    }
+    return [
+      { id: 'u-1', name: 'Ashrith', avatar: '🚀', targetScore: '95%+', status: 'Ready to study', streak: 4, todayStudySeconds: 1500, joinedAt: new Date().toISOString() }
+    ];
   },
 
   async createUser(payload: { name: string; avatar?: string; targetScore?: string }): Promise<User> {
-    const res = await fetch(`${API_BASE}/users`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    if (!res.ok) throw new Error('Failed to create user');
-    const data = await res.json();
-    return data.user;
+    try {
+      const res = await fetch(`${API_BASE}/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data.user;
+      }
+    } catch (e) {
+      console.warn('Backend offline, saving user locally');
+    }
+    const newUser: User = {
+      id: 'u-' + Date.now(),
+      name: payload.name.trim(),
+      avatar: payload.avatar || '⭐',
+      targetScore: payload.targetScore || '90%+',
+      status: 'Ready to study',
+      streak: 1,
+      todayStudySeconds: 0,
+      joinedAt: new Date().toISOString()
+    };
+    const cached = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_USERS) || '[]');
+    cached.push(newUser);
+    localStorage.setItem(LOCAL_STORAGE_KEY_USERS, JSON.stringify(cached));
+    return newUser;
   },
 
   async updateUser(id: string, payload: Partial<User> & { addStudySeconds?: number }): Promise<User> {
-    const res = await fetch(`${API_BASE}/users/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    if (!res.ok) throw new Error('Failed to update user');
-    const data = await res.json();
-    return data.user;
+    try {
+      const res = await fetch(`${API_BASE}/users/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data.user;
+      }
+    } catch (e) {
+      console.warn('Backend offline, updating user locally');
+    }
+    const cached: User[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_USERS) || '[]');
+    const match = cached.find((u) => u.id === id);
+    if (match) {
+      if (payload.name) match.name = payload.name;
+      if (payload.avatar) match.avatar = payload.avatar;
+      if (payload.targetScore) match.targetScore = payload.targetScore;
+      if (payload.status) match.status = payload.status;
+      if (payload.addStudySeconds) match.todayStudySeconds = (match.todayStudySeconds || 0) + payload.addStudySeconds;
+      localStorage.setItem(LOCAL_STORAGE_KEY_USERS, JSON.stringify(cached));
+      return match;
+    }
+    throw new Error('User not found');
   },
 
   async deleteUser(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE}/users/${id}`, {
-      method: 'DELETE'
-    });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Failed to delete user');
-    }
+    try {
+      await fetch(`${API_BASE}/users/${id}`, { method: 'DELETE' });
+    } catch (e) {}
+    const cached: User[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_USERS) || '[]');
+    localStorage.setItem(LOCAL_STORAGE_KEY_USERS, JSON.stringify(cached.filter((u) => u.id !== id)));
   },
 
   async getSettings(): Promise<{ appTitle: string; appBadge: string }> {
-    const res = await fetch(`${API_BASE}/settings`);
-    if (!res.ok) throw new Error('Failed to fetch settings');
-    const data = await res.json();
-    return data.settings;
+    try {
+      const res = await fetch(`${API_BASE}/settings`);
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem(LOCAL_STORAGE_KEY_SETTINGS, JSON.stringify(data.settings));
+        return data.settings;
+      }
+    } catch (e) {}
+    const cached = localStorage.getItem(LOCAL_STORAGE_KEY_SETTINGS);
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (e) {}
+    }
+    return { appTitle: 'Chaduvuko', appBadge: 'BIEAP 12th' };
   },
 
   async updateSettings(settings: { appTitle?: string; appBadge?: string }): Promise<{ appTitle: string; appBadge: string }> {
-    const res = await fetch(`${API_BASE}/settings`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(settings)
-    });
-    if (!res.ok) throw new Error('Failed to update settings');
-    const data = await res.json();
-    return data.settings;
+    localStorage.setItem(LOCAL_STORAGE_KEY_SETTINGS, JSON.stringify(settings));
+    try {
+      const res = await fetch(`${API_BASE}/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data.settings;
+      }
+    } catch (e) {}
+    return { appTitle: settings.appTitle || 'Chaduvuko', appBadge: settings.appBadge || 'BIEAP 12th' };
   },
 
   async getTargets(date?: string, userId?: string): Promise<Target[]> {
-    const params = new URLSearchParams();
-    if (date) params.append('date', date);
-    if (userId) params.append('userId', userId);
-    
-    const res = await fetch(`${API_BASE}/targets?${params.toString()}`);
-    if (!res.ok) throw new Error('Failed to fetch targets');
-    const data = await res.json();
-    return data.targets;
+    try {
+      const params = new URLSearchParams();
+      if (date) params.append('date', date);
+      if (userId) params.append('userId', userId);
+      const res = await fetch(`${API_BASE}/targets?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.targets)) {
+          // Sync with local cache
+          localStorage.setItem(LOCAL_STORAGE_KEY_TARGETS, JSON.stringify(data.targets));
+          return data.targets;
+        }
+      }
+    } catch (e) {
+      console.warn('Backend offline, reading targets from local storage');
+    }
+    const cached: Target[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_TARGETS) || '[]');
+    let list = cached;
+    if (date) list = list.filter((t) => t.date === date);
+    if (userId) list = list.filter((t) => t.userId === userId);
+    return list;
   },
 
   async createTarget(target: Omit<Target, 'id' | 'completed' | 'completedAt'>): Promise<Target> {
-    const res = await fetch(`${API_BASE}/targets`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(target)
-    });
-    if (!res.ok) throw new Error('Failed to create target');
-    const data = await res.json();
-    return data.target;
+    try {
+      const res = await fetch(`${API_BASE}/targets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(target)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data.target;
+      }
+    } catch (e) {
+      console.warn('Backend offline, storing target locally');
+    }
+
+    const newTarget: Target = {
+      ...target,
+      id: 't-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      completed: false,
+      completedAt: null,
+      completedQuestionsType: null,
+      completedQuestionsCount: null,
+      timeSpentSeconds: 0
+    };
+
+    const cached: Target[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_TARGETS) || '[]');
+    cached.push(newTarget);
+    localStorage.setItem(LOCAL_STORAGE_KEY_TARGETS, JSON.stringify(cached));
+    return newTarget;
   },
 
   async broadcastTarget(target: Omit<Target, 'id' | 'userId' | 'completed' | 'completedAt'>): Promise<{ targets: Target[]; count: number }> {
-    const res = await fetch(`${API_BASE}/targets/broadcast`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(target)
-    });
-    if (!res.ok) throw new Error('Failed to broadcast target');
-    return await res.json();
+    try {
+      const res = await fetch(`${API_BASE}/targets/broadcast`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(target)
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {}
+
+    const users: User[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_USERS) || '[]');
+    const createdList: Target[] = users.map((u) => ({
+      ...target,
+      id: 't-' + Date.now() + '-' + u.id,
+      userId: u.id,
+      completed: false,
+      completedAt: null,
+      completedQuestionsType: null,
+      completedQuestionsCount: null,
+      timeSpentSeconds: 0
+    }));
+
+    const cached: Target[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_TARGETS) || '[]');
+    cached.push(...createdList);
+    localStorage.setItem(LOCAL_STORAGE_KEY_TARGETS, JSON.stringify(cached));
+    return { targets: createdList, count: createdList.length };
   },
 
   async toggleTarget(
     id: string,
     options?: { completedQuestionsType?: 'all' | 'custom'; completedQuestionsCount?: number }
   ): Promise<Target> {
-    const res = await fetch(`${API_BASE}/targets/${id}/toggle`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(options || {})
-    });
-    if (!res.ok) throw new Error('Failed to toggle target');
-    const data = await res.json();
-    return data.target;
+    try {
+      const res = await fetch(`${API_BASE}/targets/${id}/toggle`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(options || {})
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data.target;
+      }
+    } catch (e) {}
+
+    const cached: Target[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_TARGETS) || '[]');
+    const target = cached.find((t) => t.id === id);
+    if (target) {
+      target.completed = !target.completed;
+      target.completedAt = target.completed ? new Date().toISOString() : null;
+      target.completedQuestionsType = target.completed ? (options?.completedQuestionsType || 'all') : null;
+      target.completedQuestionsCount = target.completed ? (options?.completedQuestionsCount ?? null) : null;
+      localStorage.setItem(LOCAL_STORAGE_KEY_TARGETS, JSON.stringify(cached));
+      return target;
+    }
+    throw new Error('Target not found');
   },
 
   async logTimer(targetId: string, seconds: number): Promise<{ target: Target; userStudySeconds: number }> {
-    const res = await fetch(`${API_BASE}/targets/${targetId}/timer`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ seconds })
-    });
-    if (!res.ok) throw new Error('Failed to log timer');
-    return await res.json();
+    try {
+      const res = await fetch(`${API_BASE}/targets/${targetId}/timer`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seconds })
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {}
+
+    const cachedTargets: Target[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_TARGETS) || '[]');
+    const target = cachedTargets.find((t) => t.id === targetId);
+    let userStudySeconds = 0;
+    if (target) {
+      target.timeSpentSeconds = (target.timeSpentSeconds || 0) + seconds;
+      localStorage.setItem(LOCAL_STORAGE_KEY_TARGETS, JSON.stringify(cachedTargets));
+
+      const cachedUsers: User[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_USERS) || '[]');
+      const user = cachedUsers.find((u) => u.id === target.userId);
+      if (user) {
+        user.todayStudySeconds = (user.todayStudySeconds || 0) + seconds;
+        userStudySeconds = user.todayStudySeconds;
+        localStorage.setItem(LOCAL_STORAGE_KEY_USERS, JSON.stringify(cachedUsers));
+      }
+      return { target, userStudySeconds };
+    }
+    throw new Error('Target not found');
   },
 
   async deleteTarget(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE}/targets/${id}`, {
-      method: 'DELETE'
-    });
-    if (!res.ok) throw new Error('Failed to delete target');
+    try {
+      await fetch(`${API_BASE}/targets/${id}`, { method: 'DELETE' });
+    } catch (e) {}
+    const cached: Target[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_TARGETS) || '[]');
+    localStorage.setItem(LOCAL_STORAGE_KEY_TARGETS, JSON.stringify(cached.filter((t) => t.id !== id)));
+  },
+
+  async rescheduleTarget(id: string, date: string): Promise<void> {
+    try {
+      await fetch(`${API_BASE}/targets/${id}/reschedule`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date })
+      });
+    } catch (e) {}
+    const cached: Target[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_TARGETS) || '[]');
+    const target = cached.find((t) => t.id === id);
+    if (target) {
+      target.date = date;
+      localStorage.setItem(LOCAL_STORAGE_KEY_TARGETS, JSON.stringify(cached));
+    }
   },
 
   async getProgress(userId: string): Promise<Record<string, { status: ChapterStatus; updatedAt: string }>> {
-    const res = await fetch(`${API_BASE}/progress/${userId}`);
-    if (!res.ok) throw new Error('Failed to fetch progress');
-    const data = await res.json();
-    return data.progress || {};
+    try {
+      const res = await fetch(`${API_BASE}/progress/${userId}`);
+      if (res.ok) {
+        const data = await res.json();
+        return data.progress || {};
+      }
+    } catch (e) {}
+    const cached = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_PROGRESS) || '{}');
+    return cached[userId] || {};
   },
 
   async updateProgress(userId: string, chapterId: string, status: ChapterStatus): Promise<Record<string, any>> {
-    const res = await fetch(`${API_BASE}/progress/${userId}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chapterId, status })
-    });
-    if (!res.ok) throw new Error('Failed to update progress');
-    const data = await res.json();
-    return data.progress;
+    try {
+      const res = await fetch(`${API_BASE}/progress/${userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chapterId, status })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data.progress;
+      }
+    } catch (e) {}
+
+    const cached = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_PROGRESS) || '{}');
+    if (!cached[userId]) cached[userId] = {};
+    cached[userId][chapterId] = { status, updatedAt: new Date().toISOString() };
+    localStorage.setItem(LOCAL_STORAGE_KEY_PROGRESS, JSON.stringify(cached));
+    return cached[userId];
   },
 
   async getGroupOverview(date?: string): Promise<GroupOverview> {
-    const params = new URLSearchParams();
-    if (date) params.append('date', date);
-    const res = await fetch(`${API_BASE}/group-overview?${params.toString()}`);
-    if (!res.ok) throw new Error('Failed to fetch group overview');
-    return await res.json();
+    try {
+      const params = new URLSearchParams();
+      if (date) params.append('date', date);
+      const res = await fetch(`${API_BASE}/group-overview?${params.toString()}`);
+      if (res.ok) return await res.json();
+    } catch (e) {}
+
+    // Fallback overview calculation from local cache
+    const today = date || new Date().toISOString().split('T')[0];
+    const users: User[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_USERS) || '[]');
+    const targets: Target[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_TARGETS) || '[]');
+    const todayTargets = targets.filter((t) => t.date === today);
+    const completedCount = todayTargets.filter((t) => t.completed).length;
+
+    return {
+      success: true,
+      today,
+      totalSubjectMarks: { Maths: 126, Physics: 106, Chemistry: 110 },
+      grandTotalMarks: 342,
+      todayGroupTargetsCount: todayTargets.length,
+      todayGroupCompletedCount: completedCount,
+      groupDailyCompletionRate: todayTargets.length > 0 ? Math.round((completedCount / todayTargets.length) * 100) : 0,
+      groupAverageSyllabusRate: 25,
+      groupTodayStudyMinutes: Math.round(users.reduce((acc, u) => acc + (u.todayStudySeconds || 0), 0) / 60),
+      members: users.map((u) => {
+        const uTargets = todayTargets.filter((t) => t.userId === u.id);
+        const uComp = uTargets.filter((t) => t.completed).length;
+        return {
+          ...u,
+          targetsToday: { total: uTargets.length, completed: uComp, list: uTargets },
+          dailyCompletionRate: uTargets.length > 0 ? Math.round((uComp / uTargets.length) * 100) : 0,
+          completedWeightage: 40,
+          grandTotalMarks: 342,
+          syllabusCompletionRate: 25,
+          todayStudyMinutes: Math.round((u.todayStudySeconds || 0) / 60)
+        };
+      })
+    };
   }
 };
