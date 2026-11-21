@@ -318,6 +318,27 @@ cd server && npm install && cd ..
 cd client && npm install && cd ..
 ```
 
+### Database Configuration (Turso Cloud DB)
+Chaduvuko uses **[Turso](https://turso.tech/)** (distributed serverless SQLite via LibSQL) for high-performance cloud storage and persistent tracking across all devices.
+
+1. Create a free account at [turso.tech](https://turso.tech/) or install the Turso CLI:
+   ```bash
+   # On macOS/Linux: brew install tursodatabase/tap/turso
+   # On Windows (PowerShell): irm https://get.turso.tech | iex
+   ```
+2. Create your database:
+   ```bash
+   turso db create chaduvuko
+   turso db show --url chaduvuko
+   turso db tokens create chaduvuko
+   ```
+3. Add your credentials to `server/.env` (or root `.env`):
+   ```env
+   TURSO_DATABASE_URL=libsql://chaduvuko-yourusername.turso.io
+   TURSO_AUTH_TOKEN=your_auth_token_here
+   ```
+> *Note:* If no Turso credentials are provided, Chaduvuko automatically uses a local SQLite database (`data/chaduvuko.db`) with zero configuration required!
+
 ### Running the Application
 Launch both the backend API server and the Vite client development server concurrently:
 
