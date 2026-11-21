@@ -5,7 +5,6 @@ import { CompleteTaskModal } from './CompleteTaskModal';
 
 interface DailyTargetsProps {
   currentUser: User | null;
-  users?: User[];
   selectedDate: string;
   targets: Target[];
   onToggleTarget: (id: string, options?: { completedQuestionsType?: 'all' | 'custom'; completedQuestionsCount?: number }) => void;
@@ -13,7 +12,6 @@ interface DailyTargetsProps {
   onOpenAddModal: (subject: SubjectType, broadcast?: boolean) => void;
   onNavigateToSyllabus: () => void;
   onStartTimerForTarget: (targetId: string) => void;
-  onSelectUser?: (user: User) => void;
   onRescheduleTarget?: (id: string, newDate: string) => void;
 }
 
@@ -23,28 +21,39 @@ const SUBJECT_CONFIG: Record<
     badgeText: string;
     icon: string;
     dotColor: string;
+    glowClass: string;
+    borderAccent: string;
+    gradientBg: string;
   }
 > = {
   Maths: {
     badgeText: 'text-violet-400',
     icon: '📐',
-    dotColor: 'bg-violet-400'
+    dotColor: 'bg-violet-400',
+    glowClass: 'glow-maths',
+    borderAccent: 'border-violet-500/30',
+    gradientBg: 'from-violet-950/20 via-zinc-900/70 to-zinc-950/90'
   },
   Physics: {
     badgeText: 'text-sky-400',
     icon: '⚡',
-    dotColor: 'bg-sky-400'
+    dotColor: 'bg-sky-400',
+    glowClass: 'glow-physics',
+    borderAccent: 'border-sky-500/30',
+    gradientBg: 'from-sky-950/20 via-zinc-900/70 to-zinc-950/90'
   },
   Chemistry: {
     badgeText: 'text-emerald-400',
     icon: '🧪',
-    dotColor: 'bg-emerald-400'
+    dotColor: 'bg-emerald-400',
+    glowClass: 'glow-chemistry',
+    borderAccent: 'border-emerald-500/30',
+    gradientBg: 'from-emerald-950/20 via-zinc-900/70 to-zinc-950/90'
   }
 };
 
 export const DailyTargets: React.FC<DailyTargetsProps> = ({
   currentUser,
-  users = [],
   selectedDate,
   targets,
   onToggleTarget,
@@ -52,14 +61,12 @@ export const DailyTargets: React.FC<DailyTargetsProps> = ({
   onOpenAddModal,
   onNavigateToSyllabus,
   onStartTimerForTarget,
-  onSelectUser,
   onRescheduleTarget
 }) => {
   const subjects: SubjectType[] = ['Maths', 'Physics', 'Chemistry'];
 
-  // State for completion dialog & quick user switcher
+  // State for completion dialog
   const [completingTarget, setCompletingTarget] = useState<Target | null>(null);
-  const [quickSwitcherOpen, setQuickSwitcherOpen] = useState(false);
 
   // Filter targets for current user and date
   const userTargets = targets.filter(
@@ -112,116 +119,81 @@ export const DailyTargets: React.FC<DailyTargetsProps> = ({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Daily Progress Minimal Card */}
-      <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm backdrop-blur-sm">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div className="space-y-4 pb-12 sm:pb-4">
+      {/* Daily Progress Glassmorphic Hero Card */}
+      <div className="glass-panel rounded-3xl p-4 sm:p-6 space-y-5 shadow-2xl relative overflow-hidden">
+        {/* Subtle Ambient Background Gradients */}
+        <div className="absolute -top-20 -right-20 w-60 h-60 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-lg">{currentUser?.avatar || '👤'}</span>
-              <h2 className="text-sm sm:text-base font-semibold text-zinc-100 tracking-tight">
-                {currentUser?.name ? `${currentUser.name}'s Daily Goals` : 'Daily Goals'}
-              </h2>
-
-              {/* Quick Profile Switcher Pill */}
-              {users.length > 1 && onSelectUser && (
-                <div className="relative">
-                  <button
-                    onClick={() => setQuickSwitcherOpen(!quickSwitcherOpen)}
-                    className="text-[11px] px-2 py-0.5 rounded-lg bg-zinc-800 hover:bg-zinc-750 text-zinc-300 border border-zinc-700/80 transition flex items-center gap-1 font-medium active:scale-95"
-                    title="Switch student"
-                  >
-                    <span>Switch</span>
-                    <span className="text-[9px] text-zinc-400">▾</span>
-                  </button>
-
-                  {quickSwitcherOpen && (
-                    <>
-                      <div
-                        className="fixed inset-0 z-30"
-                        onClick={() => setQuickSwitcherOpen(false)}
-                      />
-                      <div className="absolute left-0 mt-1.5 w-44 rounded-xl bg-zinc-900 border border-zinc-800 shadow-2xl py-1 z-40 animate-fade-in">
-                        <div className="px-3 py-1 text-[10px] font-semibold text-zinc-500 uppercase">
-                          Select Student
-                        </div>
-                        {users.map((u) => {
-                          const isSel = u.id === currentUser?.id;
-                          return (
-                            <button
-                              key={u.id}
-                              onClick={() => {
-                                if ('vibrate' in navigator) navigator.vibrate(25);
-                                onSelectUser(u);
-                                setQuickSwitcherOpen(false);
-                              }}
-                              className={`w-full text-left px-3 py-1.5 flex items-center justify-between text-xs transition ${
-                                isSel
-                                  ? 'bg-zinc-800 text-zinc-100 font-semibold'
-                                  : 'text-zinc-300 hover:bg-zinc-800/60'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2 truncate">
-                                <span>{u.avatar}</span>
-                                <span className="truncate">{u.name}</span>
-                              </div>
-                              {isSel && <Check className="w-3.5 h-3.5 text-zinc-200" />}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="text-2xl p-1.5 rounded-xl bg-zinc-950/70 border border-white/10 shadow-inner">
+                {currentUser?.avatar || '👤'}
+              </span>
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                  <span>{currentUser?.name ? `${currentUser.name}'s Goals` : 'Daily Goals'}</span>
+                  {currentUser?.streak ? (
+                    <span className="text-[11px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      🔥 {currentUser.streak}d streak
+                    </span>
+                  ) : null}
+                </h2>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  BIEAP 12th Board checklist • Track daily marks mastery
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-zinc-400 mt-1">
-              Maths, Physics & Chemistry target checklist for today.
-            </p>
           </div>
 
-          {/* Quick Action: Assign Task for All Members */}
-          <div className="w-full sm:w-auto">
+          {/* Quick Action: Group Broadcast */}
+          <div className="w-full sm:w-auto flex items-center gap-2">
             <button
               onClick={() => onOpenAddModal('Maths', true)}
-              className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-zinc-100 hover:bg-white text-zinc-900 text-xs font-semibold shadow-sm active:scale-95 transition"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 text-xs font-bold shadow-lg shadow-white/5 active-press transition"
             >
               <Users className="w-3.5 h-3.5" />
-              <span>Create Task for Group</span>
+              <span>Broadcast to Group</span>
             </button>
           </div>
         </div>
 
-        {/* Minimal Progress Bar (Sleek 4px) */}
-        <div className="space-y-2 pt-1 border-t border-zinc-800/60">
+        {/* Dynamic Dual Progress Meter */}
+        <div className="relative z-10 space-y-2.5 pt-2 border-t border-white/10">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-zinc-300 font-medium flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Completed:</span>
-              <strong className="text-zinc-100 font-semibold ml-1">
+            <span className="text-zinc-200 font-medium flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <span>Today's Completion:</span>
+              <strong className="text-emerald-300 font-bold ml-0.5">
                 {completedTargets} of {totalTargets} ({memberDailyCompletionPercent}%)
               </strong>
             </span>
-            <span className="text-[11px] text-zinc-400">
-              Marks: <strong className="text-zinc-200">{completedWeightageToday}/{totalWeightageToday} M</strong>
+            <span className="text-xs font-semibold text-zinc-300 bg-white/5 px-2.5 py-1 rounded-lg border border-white/5">
+              Marks Earned: <strong className="text-violet-300">{completedWeightageToday}/{totalWeightageToday} M</strong>
             </span>
           </div>
 
-          <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+          {/* Glowing Multi-Segment Progress Bar */}
+          <div className="w-full h-2.5 bg-zinc-950/80 rounded-full overflow-hidden p-0.5 border border-white/10 shadow-inner">
             <div
-              className="h-full bg-emerald-400 rounded-full transition-all duration-300"
+              className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-sky-400 rounded-full transition-all duration-500 shadow-sm"
               style={{ width: `${memberDailyCompletionPercent}%` }}
             />
           </div>
 
           <div className="flex items-center justify-between text-[11px] text-zinc-400 pt-0.5">
-            <span>Subjects Done: <strong className="text-zinc-200">{subjectsCompletedCount}/3</strong></span>
-            <span>Date: <strong className="text-zinc-300">{selectedDate}</strong></span>
+            <span className="flex items-center gap-1">
+              <span>Subjects Active:</span>
+              <strong className="text-zinc-200">{subjectsCompletedCount}/3 completed</strong>
+            </span>
+            <span className="font-mono text-zinc-400">📅 {selectedDate}</span>
           </div>
         </div>
 
-        {/* 3-Subject Minimal Status Chips */}
-        <div className="grid grid-cols-3 gap-2">
+        {/* 3-Subject Modern Status Chips */}
+        <div className="relative z-10 grid grid-cols-3 gap-2 sm:gap-3">
           {subjects.map((sub) => {
             const hasDone = targetsBySubject[sub].some((t) => t.completed);
             const hasAny = targetsBySubject[sub].length > 0;
@@ -230,25 +202,25 @@ export const DailyTargets: React.FC<DailyTargetsProps> = ({
             return (
               <div
                 key={sub}
-                className={`py-2 px-2 rounded-xl border text-center transition ${
+                className={`py-2 px-2.5 rounded-xl border text-center transition-all ${
                   hasDone
-                    ? 'bg-zinc-800/80 border-emerald-500/40 text-emerald-300'
+                    ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-200 shadow-sm'
                     : hasAny
-                    ? 'bg-zinc-850/60 border-zinc-800 text-zinc-300'
-                    : 'bg-zinc-900/30 border-zinc-850 text-zinc-500'
+                    ? 'bg-zinc-900/60 border-white/10 text-zinc-200'
+                    : 'bg-zinc-950/40 border-white/5 text-zinc-500'
                 }`}
               >
-                <div className="flex items-center justify-center gap-1 text-xs font-medium">
+                <div className="flex items-center justify-center gap-1.5 text-xs font-bold">
                   <span>{cfg.icon}</span>
-                  <span>{sub}</span>
+                  <span className={cfg.badgeText}>{sub}</span>
                 </div>
-                <div className="text-[10px] mt-0.5">
+                <div className="text-[10px] mt-0.5 font-medium">
                   {hasDone ? (
-                    <span className="text-emerald-400 font-semibold">✓ Done</span>
+                    <span className="text-emerald-400 font-bold">✓ 100% Done</span>
                   ) : hasAny ? (
-                    <span className="text-amber-400 font-medium">Pending</span>
+                    <span className="text-amber-400">In Progress</span>
                   ) : (
-                    <span className="text-zinc-600">None</span>
+                    <span className="text-zinc-500">No Goals</span>
                   )}
                 </div>
               </div>
@@ -259,11 +231,11 @@ export const DailyTargets: React.FC<DailyTargetsProps> = ({
 
       {/* Unfinished Previous Targets Banner */}
       {pendingPreviousTargets.length > 0 && (
-        <div className="bg-amber-950/40 border border-amber-800/60 rounded-2xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs animate-fade-in shadow-sm">
-          <div className="flex items-center gap-2 text-amber-300">
+        <div className="glass-panel border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs animate-fade-in shadow-lg glow-amber">
+          <div className="flex items-center gap-2.5 text-amber-300">
             <Clock className="w-4 h-4 shrink-0 text-amber-400" />
             <span>
-              You have <strong className="text-amber-200">{pendingPreviousTargets.length}</strong> unfinished goal(s) from earlier days.
+              You have <strong className="text-amber-100 font-bold">{pendingPreviousTargets.length}</strong> unfinished goal(s) from earlier days.
             </span>
           </div>
           <button
@@ -271,15 +243,15 @@ export const DailyTargets: React.FC<DailyTargetsProps> = ({
             onClick={() => {
               pendingPreviousTargets.forEach((t) => onRescheduleTarget?.(t.id, selectedDate));
             }}
-            className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 rounded-xl font-medium text-xs whitespace-nowrap transition active:scale-95"
+            className="px-3.5 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 rounded-xl font-semibold text-xs whitespace-nowrap transition active-press"
           >
             Carry Over to Today &rarr;
           </button>
         </div>
       )}
 
-      {/* 3 Subject Columns / Clean Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
+      {/* 3 Subject Columns / Glassmorphic Glowing Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {subjects.map((subject) => {
           const cfg = SUBJECT_CONFIG[subject];
           const subTargets = targetsBySubject[subject];
@@ -292,92 +264,92 @@ export const DailyTargets: React.FC<DailyTargetsProps> = ({
           return (
             <div
               key={subject}
-              className="rounded-2xl border border-zinc-800/80 bg-zinc-900/50 backdrop-blur-sm flex flex-col justify-between overflow-hidden shadow-sm"
+              className={`rounded-3xl border ${cfg.borderAccent} bg-gradient-to-b ${cfg.gradientBg} ${cfg.glowClass} backdrop-blur-xl flex flex-col justify-between overflow-hidden shadow-xl transition-all duration-300`}
             >
               {/* Header */}
-              <div className="p-3.5 border-b border-zinc-800/80 bg-zinc-900/80 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-base">{cfg.icon}</span>
+              <div className="p-4 border-b border-white/5 bg-zinc-950/40 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xl p-1 rounded-xl bg-zinc-900/80 border border-white/10 shadow-sm">{cfg.icon}</span>
                   <div>
-                    <h3 className="font-semibold text-zinc-100 text-xs sm:text-sm">
+                    <h3 className="font-bold text-white text-sm">
                       {subject}
                     </h3>
-                    <div className="flex items-center gap-1.5 text-[10px] text-zinc-400">
-                      <span>{doneCount}/{subTargets.length} done</span>
-                      {subjectWeightage > 0 && <span>• {subjectWeightage} Marks</span>}
+                    <div className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+                      <span className="font-medium text-zinc-300">{doneCount}/{subTargets.length} done</span>
+                      {subjectWeightage > 0 && <span>• <strong className={cfg.badgeText}>{subjectWeightage} Marks</strong></span>}
                     </div>
                   </div>
                 </div>
 
                 <button
                   onClick={() => onOpenAddModal(subject, false)}
-                  className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-750 text-zinc-200 border border-zinc-700/60 font-medium active:scale-95 transition"
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/10 font-semibold active-press transition"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Target</span>
+                  <span>Add Goal</span>
                 </button>
               </div>
 
               {/* Task Cards List */}
-              <div className="p-2.5 space-y-2 flex-1 min-h-[120px]">
+              <div className="p-3 space-y-2.5 flex-1 min-h-[140px]">
                 {subTargets.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-center p-4 border border-dashed border-zinc-800/80 rounded-xl">
-                    <p className="text-xs text-zinc-500 font-medium">No {subject} tasks set</p>
+                  <div className="h-full min-h-[130px] flex flex-col items-center justify-center text-center p-4 border border-dashed border-white/10 rounded-2xl bg-zinc-950/20">
+                    <p className="text-xs text-zinc-500 font-medium">No {subject} goals for today</p>
                     <button
                       onClick={() => onOpenAddModal(subject, false)}
-                      className="mt-2 text-xs font-medium px-2.5 py-1 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white transition active:scale-95 flex items-center gap-1"
+                      className="mt-2 text-xs font-semibold px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-zinc-200 hover:text-white border border-white/10 transition active-press flex items-center gap-1.5"
                     >
                       <Plus className="w-3 h-3" />
-                      <span>Set Target</span>
+                      <span>Set {subject} Goal</span>
                     </button>
                   </div>
                 ) : (
                   subTargets.map((target) => (
                     <div
                       key={target.id}
-                      className={`group p-3 rounded-xl border transition-all ${
+                      className={`group p-3.5 rounded-2xl border transition-all duration-200 active-press ${
                         target.completed
-                          ? 'bg-zinc-950/40 border-zinc-850 opacity-80'
-                          : 'bg-zinc-850/50 border-zinc-800/80 hover:border-zinc-700'
+                          ? 'glass-card opacity-70 border-white/5 bg-zinc-950/50'
+                          : 'glass-card hover:border-white/20 bg-zinc-900/60 shadow-lg'
                       }`}
                     >
-                      <div className="flex items-start gap-2.5">
-                        {/* Minimal Checkbox */}
+                      <div className="flex items-start gap-3">
+                        {/* Interactive Checkbox with Glow */}
                         <button
                           onClick={() => handleCheckboxClick(target)}
-                          className="mt-0.5 p-0.5 text-zinc-400 hover:text-zinc-100 active:scale-90 transition shrink-0"
+                          className="mt-0.5 p-0.5 text-zinc-400 hover:text-white active:scale-90 transition shrink-0"
                           title={target.completed ? "Mark incomplete" : "End & complete task"}
                         >
                           {target.completed ? (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400 fill-emerald-950" />
+                            <CheckCircle2 className="w-5 h-5 text-emerald-400 fill-emerald-950 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
                           ) : (
-                            <Circle className="w-4 h-4 text-zinc-500 hover:text-zinc-300" />
+                            <Circle className="w-5 h-5 text-zinc-600 hover:text-zinc-300" />
                           )}
                         </button>
 
                         <div className="flex-1 min-w-0">
                           {/* Badges */}
-                          <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                          <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
                             {target.chapterName && (
-                              <span className="text-[10px] font-medium text-zinc-300 bg-zinc-800/80 px-1.5 py-0.2 rounded truncate max-w-[140px]">
+                              <span className="text-[10px] font-semibold text-zinc-200 bg-white/10 px-2 py-0.5 rounded-md truncate max-w-[140px] border border-white/5">
                                 {target.chapterName}
                               </span>
                             )}
 
                             {target.exercise && (
-                              <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-zinc-800 text-violet-300 border border-zinc-700">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-violet-500/15 text-violet-300 border border-violet-500/30">
                                 {target.exercise}
                               </span>
                             )}
 
                             {target.questionCategory && target.questionCategory !== 'All' && (
-                              <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-zinc-800 text-amber-300 border border-zinc-700">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30">
                                 {target.questionCategory}
                               </span>
                             )}
 
                             {target.weightage ? (
-                              <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400">
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-zinc-800/80 text-zinc-300 border border-white/5">
                                 {target.weightage}M
                               </span>
                             ) : null}
@@ -385,10 +357,10 @@ export const DailyTargets: React.FC<DailyTargetsProps> = ({
 
                           {/* Task Description */}
                           <p
-                            className={`text-xs leading-relaxed ${
+                            className={`text-xs leading-relaxed font-medium ${
                               target.completed
                                 ? 'line-through text-zinc-500'
-                                : 'text-zinc-200'
+                                : 'text-zinc-100'
                             }`}
                           >
                             {target.task}
@@ -396,19 +368,19 @@ export const DailyTargets: React.FC<DailyTargetsProps> = ({
 
                           {/* Completed Questions Log Badge */}
                           {target.completed && (
-                            <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 px-1.5 py-0.5 rounded">
+                            <div className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-md shadow-sm">
                               <Check className="w-3 h-3 stroke-[3]" />
                               <span>
                                 {target.completedQuestionsType === 'all'
-                                  ? 'All Questions'
-                                  : `${target.completedQuestionsCount || ''} Questions Done`}
+                                  ? 'All Questions Completed'
+                                  : `${target.completedQuestionsCount || ''} Questions Logged`}
                               </span>
                             </div>
                           )}
 
                           {/* Action footer */}
-                          <div className="mt-2 flex items-center justify-between text-[10px] pt-1.5 border-t border-zinc-800/50">
-                            <span className="text-zinc-500 flex items-center gap-1">
+                          <div className="mt-2.5 flex items-center justify-between text-[11px] pt-2 border-t border-white/5">
+                            <span className="text-zinc-400 flex items-center gap-1 font-mono">
                               <Clock className="w-3 h-3 text-zinc-500" />
                               {target.timeSpentSeconds
                                 ? `${Math.round(target.timeSpentSeconds / 60)}m`
@@ -419,7 +391,7 @@ export const DailyTargets: React.FC<DailyTargetsProps> = ({
                               {!target.completed && (
                                 <button
                                   onClick={() => setCompletingTarget(target)}
-                                  className="px-2 py-0.5 rounded-md bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/60 font-medium active:scale-95 transition"
+                                  className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-semibold text-[11px] active:scale-95 transition"
                                 >
                                   End Task
                                 </button>
@@ -427,11 +399,11 @@ export const DailyTargets: React.FC<DailyTargetsProps> = ({
 
                               <button
                                 onClick={() => onStartTimerForTarget(target.id)}
-                                className="px-2 py-0.5 rounded-md bg-zinc-800 hover:bg-zinc-750 text-zinc-300 border border-zinc-700 flex items-center gap-1 active:scale-95 transition"
-                                title="Start study timer for this task"
+                                className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-zinc-200 border border-white/10 flex items-center gap-1 active:scale-95 transition text-[11px] font-medium"
+                                title="Start focus timer for this goal"
                               >
-                                <Play className="w-2.5 h-2.5 fill-current" />
-                                <span>Timer</span>
+                                <Play className="w-2.5 h-2.5 fill-current text-emerald-400" />
+                                <span>Focus</span>
                               </button>
 
                               <button
@@ -439,7 +411,7 @@ export const DailyTargets: React.FC<DailyTargetsProps> = ({
                                 className="p-1 text-zinc-500 hover:text-rose-400 transition"
                                 title="Delete task"
                               >
-                                <Trash2 className="w-3 h-3" />
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </div>
