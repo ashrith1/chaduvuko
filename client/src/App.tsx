@@ -15,9 +15,13 @@ import { CalendarView } from './components/CalendarView';
 import { AdminMonitorView } from './components/AdminMonitorView';
 import { LoginModal } from './components/LoginModal';
 import { ShareReportModal } from './components/ShareReportModal';
+import { LoginPage } from './components/LoginPage';
 
 export const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return localStorage.getItem('chaduvuko_session_authenticated') === 'true';
+  });
   const [currentTab, setCurrentTab] = useState<'daily' | 'group' | 'syllabus' | 'timer' | 'calendar' | 'admin'>(() => {
     const hash = window.location.hash.replace('#', '');
     if (['daily', 'group', 'syllabus', 'timer', 'calendar', 'admin'].includes(hash)) {
@@ -27,6 +31,10 @@ export const App: React.FC = () => {
   });
 
   const handleTabChange = (tab: 'daily' | 'group' | 'syllabus' | 'timer' | 'calendar' | 'admin') => {
+    if (tab === 'admin' && currentUser?.role !== 'admin' && currentUser?.id !== 'u-1') {
+      alert('Access Restricted: Supervisor / Admin privileges required.');
+      return;
+    }
     setCurrentTab(tab);
     window.location.hash = tab;
   };
@@ -100,14 +108,23 @@ export const App: React.FC = () => {
         document.title = `${fetchedSettings.appTitle} | ${fetchedSettings.appBadge}`;
       }
 
-      // Determine active user
-      const storedUserId = api.getCurrentUserId();
-      const matched = fetchedUsers.find((u) => u.id === storedUserId) || fetchedUsers[0] || null;
-      setCurrentUser(matched);
-
-      if (matched) {
-        const prog = await api.getProgress(matched.id);
-        setUserProgress(prog);
+      // Determine active user from verified session
+      const isAuth = localStorage.getItem('chaduvuko_session_authenticated') === 'true';
+      const authUserId = localStorage.getItem('chaduvuko_auth_user_id');
+      if (isAuth && authUserId) {
+        const matched = fetchedUsers.find((u) => u.id === authUserId);
+        if (matched) {
+          setCurrentUser(matched);
+          setIsAuthenticated(true);
+          const prog = await api.getProgress(matched.id);
+          setUserProgress(prog);
+        } else {
+          setCurrentUser(null);
+          setIsAuthenticated(false);
+        }
+      } else {
+        setCurrentUser(null);
+        setIsAuthenticated(false);
       }
     } catch (err) {
       console.error('Failed to load initial data:', err);
@@ -119,6 +136,30 @@ export const App: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const handleLogin = async (user: User) => {
+    setCurrentUser(user);
+    api.setCurrentUserId(user.id);
+    localStorage.setItem('chaduvuko_session_authenticated', 'true');
+    localStorage.setItem('chaduvuko_auth_user_id', user.id);
+    setIsAuthenticated(true);
+    try {
+      const prog = await api.getProgress(user.id);
+      setUserProgress(prog);
+    } catch (e) {
+      console.error(e);
+    }
+    handleTabChange('daily');
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('chaduvuko_session_authenticated');
+    localStorage.removeItem('chaduvuko_auth_user_id');
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    window.location.hash = 'daily';
+    setCurrentTab('daily');
+  };
 
   // Periodic poll for peer activity every 10 seconds
   useEffect(() => {
@@ -157,7 +198,12 @@ export const App: React.FC = () => {
   };
 
   const handleLoginSuccess = async (user: User) => {
+    localStorage.setItem('chaduvuko_session_authenticated', 'true');
+    localStorage.setItem('chaduvuko_auth_user_id', user.id);
     await handleSelectUser(user);
+    if (user.role !== 'admin' && user.id !== 'u-1' && currentTab === 'admin') {
+      handleTabChange('daily');
+    }
   };
 
   const handleUpdatePin = async (userId: string, pin: string) => {
@@ -418,6 +464,18 @@ export const App: React.FC = () => {
     );
   }
 
+  // If not authenticated or no active user, show LoginPage
+  if (!isAuthenticated || !currentUser) {
+    return (
+      <LoginPage
+        users={users}
+        onLogin={handleLogin}
+        appTitle={appSettings.appTitle}
+        appBadge={appSettings.appBadge}
+      />
+    );
+  }
+
   // Filter user's targets for today for the timer selector
   const currentUserTodayTargets = targets.filter(
     (t) => t.userId === currentUser?.id && t.date === selectedDate
@@ -439,6 +497,7 @@ export const App: React.FC = () => {
         onOpenAboutModal={() => setIsAboutModalOpen(true)}
         onOpenLoginModal={handleOpenLoginModal}
         onOpenShareModal={() => setIsShareModalOpen(true)}
+        onLogout={handleLogout}
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
       />
