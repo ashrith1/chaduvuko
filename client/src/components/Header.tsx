@@ -15,7 +15,8 @@ import {
   Info,
   Shield,
   Share2,
-  Lock
+  Lock,
+  LogOut
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -31,6 +32,7 @@ interface HeaderProps {
   onOpenAboutModal?: () => void;
   onOpenLoginModal?: (targetUser?: User | null) => void;
   onOpenShareModal?: () => void;
+  onLogout?: () => void;
   selectedDate: string;
   onDateChange: (date: string) => void;
 }
@@ -48,6 +50,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAboutModal,
   onOpenLoginModal,
   onOpenShareModal,
+  onLogout,
   selectedDate,
   onDateChange
 }) => {
@@ -255,6 +258,18 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               ) : null}
             </button>
+
+            {/* Log Out Button */}
+            {onLogout && (
+              <button
+                type="button"
+                onClick={onLogout}
+                className="p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-400 hover:text-red-400 transition"
+                title="Log Out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            )}
 
             {/* Quick About & Settings Icons (Desktop) */}
             {onOpenAboutModal && (
@@ -514,6 +529,21 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <Info className="w-3.5 h-3.5 text-indigo-400" />
                 <span>About Chaduvuko & Blueprint</span>
+              </button>
+            )}
+
+            {/* Log Out Button */}
+            {onLogout && (
+              <button
+                type="button"
+                onClick={() => {
+                  setUserDrawerOpen(false);
+                  onLogout();
+                }}
+                className="w-full py-2 px-3 rounded-xl bg-red-950/30 hover:bg-red-950/50 border border-red-900/40 text-red-300 text-xs font-semibold flex items-center justify-center gap-2 transition"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Log Out of {currentUser?.name || 'Account'}</span>
               </button>
             )}
 
