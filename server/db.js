@@ -195,16 +195,16 @@ export async function initDatabase() {
     if (!migrated) {
       // Seed initial starter users
       const initialUsers = [
-        { id: 'u-1', name: 'Ashrith', avatar: '🚀', targetScore: '95%+', status: 'Ready to study', streak: 4, todayStudySeconds: 1500 },
-        { id: 'u-2', name: 'Rohan', avatar: '⚡', targetScore: '90%+', status: 'Solving Integrals', streak: 3, todayStudySeconds: 1200 },
-        { id: 'u-3', name: 'Priya', avatar: '📚', targetScore: '95%+', status: 'Reviewing Ray Optics', streak: 5, todayStudySeconds: 1800 }
+        { id: 'u-1', name: 'Ashrith', username: 'ashrith', password: '1234', role: 'admin', avatar: '🚀', targetScore: '95%+', status: 'Ready to study', streak: 4, todayStudySeconds: 1500 },
+        { id: 'u-1795286772208', name: 'Teja Swaroop', username: 'teja', password: '6789', role: 'student', avatar: '⚡', targetScore: '90%+', status: 'Solving Integrals', streak: 3, todayStudySeconds: 1200 },
+        { id: 'u-1795286802924', name: 'Harshith', username: 'harshith', password: '9494', role: 'student', avatar: '📚', targetScore: '95%+', status: 'Reviewing Ray Optics', streak: 5, todayStudySeconds: 1800 }
       ];
 
       for (const u of initialUsers) {
         await db.execute({
-          sql: `INSERT INTO users (id, name, avatar, target_score, status, streak, today_study_seconds, joined_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          args: [u.id, u.name, u.avatar, u.targetScore, u.status, u.streak, u.todayStudySeconds, new Date().toISOString()]
+          sql: `INSERT INTO users (id, name, username, password, avatar, target_score, status, streak, today_study_seconds, joined_at, role, pin)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          args: [u.id, u.name, u.username, u.password, u.avatar, u.targetScore, u.status, u.streak, u.todayStudySeconds, new Date().toISOString(), u.role, u.password]
         });
       }
 
