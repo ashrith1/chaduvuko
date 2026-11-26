@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { User } from '../types';
-import { Lock, Shield, ArrowRight, X, KeyRound, AlertCircle } from 'lucide-react';
+import { Lock, User as UserIcon, ArrowRight, X, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { api } from '../services/api';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -13,49 +14,43 @@ interface LoginModalProps {
 export const LoginModal: React.FC<LoginModalProps> = ({
   isOpen,
   onClose,
-  users,
   onLoginSuccess,
   targetUser
 }) => {
   if (!isOpen) return null;
 
-  const [selectedUser, setSelectedUser] = useState<User>(targetUser || users[0] || null);
-  const [pin, setPin] = useState('');
+  const [usernameInput, setUsernameInput] = useState(() => targetUser?.username || targetUser?.name || '');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleKeyClick = (digit: string) => {
-    if (pin.length < 6) {
-      setPin((prev) => prev + digit);
-      setError(null);
-    }
-  };
-
-  const handleBackspace = () => {
-    setPin((prev) => prev.slice(0, -1));
-    setError(null);
-  };
-
-  const handleSubmit = (e?: React.FormEvent) => {
+  const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!selectedUser) return;
-    if (pin.length < 4) {
-      setError('Please enter a 4-digit PIN');
+    const idToUse = targetUser ? (targetUser.username || targetUser.id) : usernameInput.trim();
+    const passToUse = password.trim();
+
+    if (!idToUse) {
+      setError('Please enter your User ID or Username');
+      return;
+    }
+    if (!passToUse) {
+      setError('Please enter your password');
       return;
     }
 
     setLoading(true);
     setError(null);
 
-    // Verify PIN
-    const expectedPin = selectedUser.pin || '1234';
-    if (pin === expectedPin || pin === '1234') {
-      onLoginSuccess(selectedUser);
+    try {
+      const user = await api.login(idToUse, passToUse);
+      onLoginSuccess(user);
       onClose();
-    } else {
-      setError('Incorrect PIN. (Default PIN is 1234)');
+    } catch (err: any) {
+      setError(err.message || 'Incorrect User ID or Password.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -75,8 +70,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               <Lock className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-zinc-100">Account Sign In</h3>
-              <p className="text-[11px] text-zinc-400">Enter your 4-digit security PIN</p>
+              <h3 className="text-sm font-semibold text-zinc-100">
+                {targetUser ? `Switch to ${targetUser.name}` : 'Account Sign In'}
+              </h3>
+              <p className="text-[11px] text-zinc-400">Enter credentials to authenticate</p>
             </div>
           </div>
           <button
@@ -88,100 +85,75 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           </button>
         </div>
 
-        {/* User Selection Pill Carousel / Grid */}
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-medium text-zinc-400">Select Student Account:</label>
-          <div className="grid grid-cols-3 gap-2">
-            {users.map((u) => {
-              const isSelected = selectedUser?.id === u.id;
-              const isAdmin = u.role === 'admin' || u.id === 'u-1';
-              return (
-                <button
-                  key={u.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedUser(u);
-                    setPin('');
-                    setError(null);
-                  }}
-                  className={`p-2 rounded-xl border flex flex-col items-center gap-1 transition active:scale-95 text-center ${
-                    isSelected
-                      ? 'bg-zinc-800 border-zinc-600 text-white shadow-sm'
-                      : 'bg-zinc-950/60 border-zinc-850 text-zinc-400 hover:bg-zinc-800/40'
-                  }`}
-                >
-                  <span className="text-xl">{u.avatar}</span>
-                  <span className="text-xs font-semibold truncate max-w-full">{u.name}</span>
-                  {isAdmin && (
-                    <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 rounded border border-amber-500/30 flex items-center gap-0.5">
-                      <Shield className="w-2.5 h-2.5" /> Admin
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* PIN Dots Display */}
-        <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800 flex flex-col items-center justify-center space-y-2">
-          <div className="text-[11px] text-zinc-400">Enter PIN for {selectedUser?.name || 'User'}</div>
-          <div className="flex items-center gap-3 py-1">
-            {[0, 1, 2, 3].map((idx) => {
-              const hasDigit = pin.length > idx;
-              return (
-                <div
-                  key={idx}
-                  className={`w-4 h-4 rounded-full border transition-all ${
-                    hasDigit
-                      ? 'bg-zinc-100 border-white scale-110 shadow-sm'
-                      : 'bg-zinc-900 border-zinc-700'
-                  }`}
-                />
-              );
-            })}
-          </div>
-          <div className="text-[10px] text-zinc-500 flex items-center gap-1">
-            <KeyRound className="w-3 h-3" /> Default PIN: <code className="text-zinc-300">1234</code>
-          </div>
-        </div>
-
-        {/* Error message */}
         {error && (
-          <div className="flex items-center gap-2 p-2.5 bg-rose-950/40 border border-rose-800/60 rounded-xl text-rose-300 text-xs animate-shake">
+          <div className="p-2.5 rounded-xl bg-rose-950/40 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2 animate-shake">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
             <span>{error}</span>
           </div>
         )}
 
-        {/* On-Screen Mobile Number Pad */}
-        <div className="grid grid-cols-3 gap-2 pt-1 max-w-[280px] mx-auto">
-          {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'].map((k) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => {
-                if (k === 'C') setPin('');
-                else if (k === '⌫') handleBackspace();
-                else handleKeyClick(k);
-              }}
-              className="h-11 rounded-xl bg-zinc-800/80 hover:bg-zinc-750 active:bg-zinc-700 border border-zinc-750 text-sm font-semibold transition active:scale-95 flex items-center justify-center shadow-sm"
-            >
-              {k}
-            </button>
-          ))}
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {!targetUser ? (
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+                <UserIcon className="w-3.5 h-3.5 text-violet-400" /> User ID / Username:
+              </label>
+              <input
+                type="text"
+                value={usernameInput}
+                onChange={(e) => setUsernameInput(e.target.value)}
+                placeholder="Enter User ID (e.g. ashrith)"
+                autoCapitalize="none"
+                className="w-full bg-zinc-950/80 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 outline-none focus:border-violet-400/80"
+              />
+            </div>
+          ) : (
+            <div className="p-3 rounded-xl bg-zinc-950/60 border border-white/10 flex items-center gap-3">
+              <span className="text-2xl">{targetUser.avatar}</span>
+              <div>
+                <p className="text-xs font-bold text-zinc-100">{targetUser.name}</p>
+                <p className="text-[10px] text-zinc-400 font-mono">@{targetUser.username || targetUser.id}</p>
+              </div>
+            </div>
+          )}
 
-        {/* Action Button */}
-        <button
-          type="button"
-          onClick={() => handleSubmit()}
-          disabled={loading || pin.length < 4}
-          className="w-full py-2.5 bg-zinc-100 hover:bg-white disabled:opacity-40 text-zinc-900 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 shadow-sm active:scale-95 transition"
-        >
-          <span>Unlock & Access Account</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </button>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+              <Lock className="w-3.5 h-3.5 text-violet-400" /> Password:
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter password"
+                className="w-full bg-zinc-950/80 border border-white/10 rounded-xl px-3.5 py-2.5 pr-10 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 outline-none focus:border-violet-400/80"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 transition p-1"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 px-4 rounded-xl font-bold text-xs sm:text-sm bg-white text-zinc-950 hover:bg-zinc-100 disabled:opacity-40 transition active:scale-[0.99] flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <div className="w-4 h-4 border-2 border-zinc-900 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                <span>Sign In & Continue</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
+        </form>
       </div>
     </div>
   );
