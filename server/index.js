@@ -24,6 +24,7 @@ function mapUserRow(row) {
   return {
     id: String(row.id),
     name: String(row.name),
+    username: row.username || String(row.name).toLowerCase().replace(/\s+/g, ''),
     avatar: row.avatar || '🚀',
     targetScore: row.target_score || '95%+',
     status: row.status || 'Ready to study',
@@ -31,7 +32,8 @@ function mapUserRow(row) {
     todayStudySeconds: Number(row.today_study_seconds) || 0,
     joinedAt: row.joined_at,
     role: row.role || 'student',
-    pin: row.pin || '1234'
+    pin: row.pin || '1234',
+    password: row.password || row.pin || '1234'
   };
 }
 
@@ -237,21 +239,107 @@ app.delete('/api/users/:id', async (req, res) => {
   }
 });
 
-// User Login with PIN verification
+// User Login with Custom ID / Username & Password verification
 app.post('/api/login', async (req, res) => {
   try {
-    const { userId, pin } = req.body;
-    if (!userId) return res.status(400).json({ error: 'User ID is required' });
+    const identifier = String(req.body.username || req.body.userId || '').trim();
+    const secret = String(req.body.password || req.body.pin || '').trim();
 
-    const userRes = await db.execute({ sql: 'SELECT * FROM users WHERE id = ?', args: [userId] });
-    if (userRes.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+    if (!identifier) {
+      return res.status(400).json({ error: 'User ID or Username is required' });
+    }
+    if (!secret) {
+      return res.status(400).json({ error: 'Password is required' });
+    }
+
+    // Lookup user by case-insensitive username, ID, or full name
+    const userRes = await db.execute({
+      sql: 'SELECT * FROM users WHERE LOWER(username) = LOWER(?) OR LOWER(id) = LOWER(?) OR LOWER(name) = LOWER(?) LIMIT 1',
+      args: [identifier, identifier, identifier]
+    });
+
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Account not found. Please check your User ID or Username.' });
+    }
 
     const user = mapUserRow(userRes.rows[0]);
-    if (user.pin && pin !== user.pin) {
-      return res.status(401).json({ error: 'Incorrect PIN. Default PIN is 1234.' });
+    const expectedPassword = user.password || user.pin || '1234';
+
+    if (secret !== expectedPassword && secret !== user.pin && secret !== user.password) {
+      return res.status(401).json({ error: 'Incorrect password. Please try again.' });
     }
 
     res.json({ success: true, user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Student Self-Registration with custom ID and Password
+app.post('/api/register', async (req, res) => {
+  try {
+    const { name, username, password, avatar, targetScore } = req.body;
+    if (!name || !name.trim()) return res.status(400).json({ error: 'Full name is required' });
+    if (!username || !username.trim()) return res.status(400).json({ error: 'Custom User ID / Username is required' });
+    if (!password || !password.trim()) return res.status(400).json({ error: 'Password is required' });
+
+    const cleanName = name.trim();
+    const cleanUsername = username.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    const cleanPassword = password.trim();
+
+    if (cleanUsername.length < 3) {
+      return res.status(400).json({ error: 'User ID must be at least 3 characters (letters, numbers, underscores)' });
+    }
+
+    if (cleanPassword.length < 4) {
+      return res.status(400).json({ error: 'Password must be at least 4 characters' });
+    }
+
+    // Check if username is already taken
+    const existing = await db.execute({
+      sql: 'SELECT id FROM users WHERE LOWER(username) = LOWER(?) OR LOWER(id) = LOWER(?) LIMIT 1',
+      args: [cleanUsername, cleanUsername]
+    });
+
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ error: `User ID '${cleanUsername}' is already taken. Please choose another.` });
+    }
+
+    const newUser = {
+      id: 'u-' + Date.now(),
+      name: cleanName,
+      username: cleanUsername,
+      password: cleanPassword,
+      avatar: avatar || '🚀',
+      targetScore: targetScore || '95%+',
+      status: 'Ready to study',
+      streak: 1,
+      todayStudySeconds: 0,
+      joinedAt: new Date().toISOString(),
+      role: 'student',
+      pin: cleanPassword
+    };
+
+    await db.execute({
+      sql: `INSERT INTO users (id, name, username, password, avatar, target_score, status, streak, today_study_seconds, joined_at, role, pin)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        newUser.id,
+        newUser.name,
+        newUser.username,
+        newUser.password,
+        newUser.avatar,
+        newUser.targetScore,
+        newUser.status,
+        newUser.streak,
+        newUser.todayStudySeconds,
+        newUser.joinedAt,
+        newUser.role,
+        newUser.pin
+      ]
+    });
+
+    res.status(201).json({ success: true, user: newUser });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
