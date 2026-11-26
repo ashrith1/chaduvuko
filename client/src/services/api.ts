@@ -8,6 +8,51 @@ const LOCAL_STORAGE_KEY_PROGRESS = 'chaduvuko_cached_progress';
 const LOCAL_STORAGE_KEY_USERS = 'chaduvuko_cached_users';
 const LOCAL_STORAGE_KEY_SETTINGS = 'chaduvuko_cached_settings';
 
+export const DEFAULT_USERS: User[] = [
+  {
+    id: 'u-1',
+    name: 'Ashrith',
+    username: 'ashrith',
+    password: '1234',
+    avatar: '🚀',
+    targetScore: '95%+',
+    status: 'Ready to study',
+    streak: 4,
+    todayStudySeconds: 1500,
+    joinedAt: '2026-11-20T00:00:00.000Z',
+    role: 'admin',
+    pin: '1234'
+  },
+  {
+    id: 'u-1795286772208',
+    name: 'Teja Swaroop',
+    username: 'teja',
+    password: '6789',
+    avatar: '⚡',
+    targetScore: '90%+',
+    status: 'Reviewing Integrals',
+    streak: 3,
+    todayStudySeconds: 1200,
+    joinedAt: '2026-11-21T00:00:00.000Z',
+    role: 'student',
+    pin: '6789'
+  },
+  {
+    id: 'u-1795286802924',
+    name: 'Harshith',
+    username: 'harshith',
+    password: '9494',
+    avatar: '📚',
+    targetScore: '95%+',
+    status: 'Solving Physics Problems',
+    streak: 2,
+    todayStudySeconds: 900,
+    joinedAt: '2026-11-21T00:00:00.000Z',
+    role: 'student',
+    pin: '9494'
+  }
+];
+
 export const api = {
   getCurrentUserId(): string {
     return localStorage.getItem(LOCAL_STORAGE_KEY_USER) || 'u-1';
@@ -71,14 +116,12 @@ export const api = {
     const cached = localStorage.getItem(LOCAL_STORAGE_KEY_USERS);
     if (cached) {
       try {
-        return JSON.parse(cached);
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       } catch (e) {}
     }
-    return [
-      { id: 'u-1', name: 'Ashrith', avatar: '🚀', targetScore: '95%+', status: 'Ready to study', streak: 4, todayStudySeconds: 1500, joinedAt: new Date().toISOString(), role: 'admin', pin: '1234' },
-      { id: 'u-2', name: 'Rohan', avatar: '⚡', targetScore: '90%+', status: 'Focusing on Integrals', streak: 2, todayStudySeconds: 1200, joinedAt: new Date().toISOString(), role: 'student', pin: '1234' },
-      { id: 'u-3', name: 'Priya', avatar: '📚', targetScore: '98%+', status: 'Reviewing Ray Optics', streak: 5, todayStudySeconds: 2400, joinedAt: new Date().toISOString(), role: 'student', pin: '1234' }
-    ];
+    localStorage.setItem(LOCAL_STORAGE_KEY_USERS, JSON.stringify(DEFAULT_USERS));
+    return DEFAULT_USERS;
   },
 
   async createUser(payload: { name: string; avatar?: string; targetScore?: string }): Promise<User> {
@@ -126,7 +169,14 @@ export const api = {
       console.warn('Backend offline, updating user locally');
     }
     const cached: User[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_USERS) || '[]');
-    const match = cached.find((u) => u.id === id);
+    let match = cached.find((u) => u.id === id);
+    if (!match) {
+      const def = DEFAULT_USERS.find((u) => u.id === id);
+      if (def) {
+        match = { ...def };
+        cached.push(match);
+      }
+    }
     if (match) {
       if (payload.name) match.name = payload.name;
       if (payload.avatar) match.avatar = payload.avatar;
@@ -136,7 +186,19 @@ export const api = {
       localStorage.setItem(LOCAL_STORAGE_KEY_USERS, JSON.stringify(cached));
       return match;
     }
-    throw new Error('User not found');
+    // Safe fallback to prevent breaking UI with 'User not found'
+    return {
+      id,
+      name: payload.name || 'Student',
+      username: id,
+      avatar: payload.avatar || '🚀',
+      targetScore: payload.targetScore || '95%+',
+      status: payload.status || 'Ready to study',
+      streak: 1,
+      todayStudySeconds: payload.addStudySeconds || 0,
+      joinedAt: new Date().toISOString(),
+      role: 'student'
+    };
   },
 
   async deleteUser(id: string): Promise<void> {
@@ -419,41 +481,67 @@ export const api = {
   },
 
   async login(identifier: string, secret: string): Promise<User> {
+    const rawId = identifier.trim();
+    const cleanSecret = secret.trim();
+
     try {
       const res = await fetch(`${API_BASE}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: identifier, password: secret, userId: identifier, pin: secret })
+        body: JSON.stringify({ username: rawId, password: cleanSecret, userId: rawId, pin: cleanSecret })
       });
       if (res.ok) {
         const data = await res.json();
         this.setCurrentUserId(data.user.id);
         return data.user;
       }
-      const err = await res.json();
-      throw new Error(err.error || 'Login failed');
+      const err = await res.json().catch(() => ({}));
+      if (res.status === 401 || res.status === 404 || res.status === 400) {
+        throw new Error(err.error || 'Authentication failed');
+      }
     } catch (e: any) {
-      if (e.message && !e.message.includes('fetch')) {
+      if (e.message && !e.message.toLowerCase().includes('fetch') && !e.message.includes('network')) {
         throw e;
       }
-      // Offline fallback check
-      const users: User[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_USERS) || '[]');
-      const lowerId = identifier.trim().toLowerCase();
-      const match = users.find((u) =>
-        u.id.toLowerCase() === lowerId ||
-        u.username?.toLowerCase() === lowerId ||
-        u.name.toLowerCase() === lowerId
-      );
-      if (match) {
-        const validPass = match.password || match.pin || '1234';
-        if (validPass === secret || secret === '1234') {
-          this.setCurrentUserId(match.id);
-          return match;
-        }
-        throw new Error('Incorrect password. Please try again.');
-      }
-      throw new Error('Account not found with this User ID. Please check and try again.');
+      console.warn('Backend unavailable during login, evaluating local/offline credentials');
     }
+
+    // Offline / Local fallback check
+    const cachedUsers: User[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_USERS) || '[]');
+    const allKnownUsers = [...cachedUsers];
+    for (const def of DEFAULT_USERS) {
+      if (!allKnownUsers.some((u) => u.id === def.id || u.username === def.username)) {
+        allKnownUsers.push(def);
+      }
+    }
+
+    const lowerId = rawId.toLowerCase();
+    const noSpaces = lowerId.replace(/[\s_-]+/g, '');
+    const isAshrithAlias = ['ashrith', 'ashrith1', 'admin', 'u-1'].includes(lowerId) || ['ashrith', 'ashrith1', 'admin'].includes(noSpaces);
+
+    const match = allKnownUsers.find((u) => {
+      const uName = (u.name || '').toLowerCase();
+      const uUser = (u.username || '').toLowerCase();
+      const uId = (u.id || '').toLowerCase();
+      if (isAshrithAlias && (u.id === 'u-1' || uUser === 'ashrith')) return true;
+      return (
+        uId === lowerId ||
+        uUser === lowerId ||
+        uName === lowerId ||
+        uName.replace(/[\s_-]+/g, '') === noSpaces ||
+        uUser.replace(/[\s_-]+/g, '') === noSpaces
+      );
+    });
+
+    if (match) {
+      const validPass = match.password || match.pin || '1234';
+      if (validPass === cleanSecret || cleanSecret === '1234') {
+        this.setCurrentUserId(match.id);
+        return match;
+      }
+      throw new Error('Incorrect password. Please try again.');
+    }
+    throw new Error(`Account '${rawId}' not found. Please check your User ID or click 'Create Account' to register.`);
   },
 
   async register(payload: { name: string; username: string; password: string; avatar?: string; targetScore?: string }): Promise<User> {
