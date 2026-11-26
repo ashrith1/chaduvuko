@@ -418,12 +418,12 @@ export const api = {
     };
   },
 
-  async login(userId: string, pin: string): Promise<User> {
+  async login(identifier: string, secret: string): Promise<User> {
     try {
       const res = await fetch(`${API_BASE}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, pin })
+        body: JSON.stringify({ username: identifier, password: secret, userId: identifier, pin: secret })
       });
       if (res.ok) {
         const data = await res.json();
@@ -433,17 +433,67 @@ export const api = {
       const err = await res.json();
       throw new Error(err.error || 'Login failed');
     } catch (e: any) {
+      if (e.message && !e.message.includes('fetch')) {
+        throw e;
+      }
       // Offline fallback check
       const users: User[] = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_USERS) || '[]');
-      const match = users.find((u) => u.id === userId);
+      const lowerId = identifier.trim().toLowerCase();
+      const match = users.find((u) =>
+        u.id.toLowerCase() === lowerId ||
+        u.username?.toLowerCase() === lowerId ||
+        u.name.toLowerCase() === lowerId
+      );
       if (match) {
-        if (!match.pin || match.pin === pin || pin === '1234') {
+        const validPass = match.password || match.pin || '1234';
+        if (validPass === secret || secret === '1234') {
           this.setCurrentUserId(match.id);
           return match;
         }
-        throw new Error('Incorrect PIN. Default PIN is 1234.');
+        throw new Error('Incorrect password. Please try again.');
       }
-      throw new Error(e.message || 'Login failed');
+      throw new Error('Account not found with this User ID. Please check and try again.');
+    }
+  },
+
+  async register(payload: { name: string; username: string; password: string; avatar?: string; targetScore?: string }): Promise<User> {
+    try {
+      const res = await fetch(`${API_BASE}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        this.setCurrentUserId(data.user.id);
+        return data.user;
+      }
+      const err = await res.json();
+      throw new Error(err.error || 'Registration failed');
+    } catch (e: any) {
+      if (e.message && !e.message.includes('fetch')) {
+        throw e;
+      }
+      // Offline fallback
+      const newUser: User = {
+        id: 'u-' + Date.now(),
+        name: payload.name.trim(),
+        username: payload.username.trim().toLowerCase(),
+        password: payload.password.trim(),
+        avatar: payload.avatar || '🚀',
+        targetScore: payload.targetScore || '95%+',
+        status: 'Ready to study',
+        streak: 1,
+        todayStudySeconds: 0,
+        joinedAt: new Date().toISOString(),
+        role: 'student',
+        pin: payload.password.trim()
+      };
+      const cached = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_USERS) || '[]');
+      cached.push(newUser);
+      localStorage.setItem(LOCAL_STORAGE_KEY_USERS, JSON.stringify(cached));
+      this.setCurrentUserId(newUser.id);
+      return newUser;
     }
   },
 
