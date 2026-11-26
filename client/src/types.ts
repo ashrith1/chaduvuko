@@ -30,6 +30,8 @@ export interface SyllabusData {
 export interface User {
   id: string;
   name: string;
+  username?: string;
+  password?: string;
   avatar: string;
   targetScore: string;
   status: string;
