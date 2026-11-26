@@ -43,6 +43,8 @@ export async function initDatabase() {
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
+      username TEXT,
+      password TEXT,
       avatar TEXT DEFAULT '🚀',
       target_score TEXT DEFAULT '95%+',
       status TEXT DEFAULT 'Ready to study',
