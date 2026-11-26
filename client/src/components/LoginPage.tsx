@@ -1,105 +1,128 @@
 import React, { useState, useEffect } from 'react';
 import type { User } from '../types';
-import { Lock, Shield, ArrowRight, UserCheck, AlertCircle, Delete } from 'lucide-react';
+import { Lock, User as UserIcon, ArrowRight, Eye, EyeOff, AlertCircle, Sparkles, UserPlus, LogIn, Check } from 'lucide-react';
+import { api } from '../services/api';
 
 interface LoginPageProps {
-  users: User[];
+  users?: User[];
   onLogin: (user: User) => void;
   appTitle?: string;
   appBadge?: string;
 }
 
+const AVATAR_OPTIONS = ['🚀', '⚡', '📚', '🎯', '🧠', '🌟', '🏆', '💎', '💡', '🦁'];
+
 export const LoginPage: React.FC<LoginPageProps> = ({
-  users,
   onLogin,
   appTitle = 'Chaduvuko',
   appBadge = 'BIEAP 12th'
 }) => {
-  const [selectedUser, setSelectedUser] = useState<User | null>(() => users[0] || null);
-  const [pin, setPin] = useState('');
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+
+  // Login form state
+  const [identifier, setIdentifier] = useState(() => localStorage.getItem('chaduvuko_saved_identifier') || '');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+
+  // Register form state
+  const [regName, setRegName] = useState('');
+  const [regUsername, setRegUsername] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regAvatar, setRegAvatar] = useState('🚀');
+  const [regTargetScore, setRegTargetScore] = useState('95%+');
+
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Default to first user if users change and none selected
+  // Clear errors on mode switch
   useEffect(() => {
-    if (!selectedUser && users.length > 0) {
-      setSelectedUser(users[0]);
-    }
-  }, [users, selectedUser]);
-
-  // Physical keyboard support
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key >= '0' && e.key <= '9') {
-        if (pin.length < 6) {
-          setPin((prev) => prev + e.key);
-          setError(null);
-        }
-      } else if (e.key === 'Backspace') {
-        setPin((prev) => prev.slice(0, -1));
-        setError(null);
-      } else if (e.key === 'Enter') {
-        handleSubmit();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [pin, selectedUser]);
-
-  const handleKeyClick = (digit: string) => {
-    if (pin.length < 6) {
-      setPin((prev) => prev + digit);
-      setError(null);
-    }
-  };
-
-  const handleBackspace = () => {
-    setPin((prev) => prev.slice(0, -1));
     setError(null);
-  };
+    setSuccessMsg(null);
+  }, [mode]);
 
-  const handleClear = () => {
-    setPin('');
-    setError(null);
-  };
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanId = identifier.trim();
+    const cleanPass = password.trim();
 
-  const handleSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!selectedUser) {
-      setError('Please select an account first');
+    if (!cleanId) {
+      setError('Please enter your User ID or Username');
       return;
     }
-    if (pin.length < 4) {
-      setError('Please enter a 4-digit PIN');
+    if (!cleanPass) {
+      setError('Please enter your Password');
       return;
     }
 
     setLoading(true);
     setError(null);
 
-    const expectedPin = selectedUser.pin || '1234';
-    if (pin === expectedPin || pin === '1234') {
-      onLogin(selectedUser);
-    } else {
-      setError('Incorrect PIN. (Default PIN is 1234)');
-      setPin('');
+    try {
+      const user = await api.login(cleanId, cleanPass);
+      if (rememberMe) {
+        localStorage.setItem('chaduvuko_saved_identifier', cleanId);
+      } else {
+        localStorage.removeItem('chaduvuko_saved_identifier');
+      }
+      onLogin(user);
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Please check your User ID and Password.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
+  };
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!regName.trim()) {
+      setError('Please enter your full name');
+      return;
+    }
+    const cleanUser = regUsername.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    if (cleanUser.length < 3) {
+      setError('User ID must be at least 3 characters (letters, numbers, underscores)');
+      return;
+    }
+    if (regPassword.trim().length < 4) {
+      setError('Password must be at least 4 characters');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const created = await api.register({
+        name: regName.trim(),
+        username: cleanUser,
+        password: regPassword.trim(),
+        avatar: regAvatar,
+        targetScore: regTargetScore
+      });
+      setSuccessMsg(`🎉 Account created for ${created.name}! Logging in...`);
+      setTimeout(() => {
+        onLogin(created);
+      }, 700);
+    } catch (err: any) {
+      setError(err.message || 'Registration failed. That User ID might already be in use.');
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col justify-center items-center p-4 selection:bg-zinc-700 selection:text-white">
       {/* Background Accent Gradients */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl" />
+        <div className="absolute -top-40 -left-40 w-96 h-96 bg-violet-600/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl" />
       </div>
 
       <div className="relative w-full max-w-md space-y-6 z-10 animate-fade-in">
         {/* App Branding Header */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-semibold text-zinc-300">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-semibold text-zinc-300 shadow-sm">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             {appBadge}
           </div>
@@ -107,158 +130,235 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <span>🎯</span> {appTitle}
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 max-w-sm mx-auto">
-            Select your account and enter your PIN to access daily targets & syllabus tracking
+            Class 12 Intermediate Board Prep & Official Chapter Weightage Tracker
           </p>
         </div>
 
-        {/* Login Card */}
-        <div className="glass-panel border border-white/10 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-6 relative overflow-hidden">
-          <div className="absolute -top-24 -right-24 w-48 h-48 bg-violet-600/15 rounded-full blur-3xl pointer-events-none" />
+        {/* Glassmorphic Auth Box */}
+        <div className="glass-panel border border-white/10 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5 relative overflow-hidden">
+          <div className="absolute -top-20 -right-20 w-44 h-44 bg-violet-600/15 rounded-full blur-3xl pointer-events-none" />
 
-          {/* Account Selection */}
-          <div className="space-y-2.5 relative z-10">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-                <UserCheck className="w-4 h-4 text-violet-400" /> Choose Your Profile:
-              </label>
-              <span className="text-[11px] text-zinc-400 font-medium">{users.length} enrolled</span>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-              {users.map((u) => {
-                const isSelected = selectedUser?.id === u.id;
-                const isAdmin = u.role === 'admin' || u.id === 'u-1';
-                return (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedUser(u);
-                      setPin('');
-                      setError(null);
-                    }}
-                    className={`p-3 rounded-2xl border text-left transition-all duration-200 active-press flex flex-col justify-between gap-2 relative ${
-                      isSelected
-                        ? 'bg-gradient-to-b from-white/15 to-white/5 border-white/30 shadow-lg ring-1 ring-white/20'
-                        : 'bg-zinc-950/60 border-white/5 hover:bg-zinc-800/40 hover:border-white/10'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl p-1 rounded-xl bg-zinc-900/80 border border-white/10 shadow-inner">{u.avatar}</span>
-                      {isAdmin ? (
-                        <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5">
-                          <Shield className="w-2.5 h-2.5" /> Admin
-                        </span>
-                      ) : (
-                        <span className="text-[9px] bg-white/10 text-zinc-300 px-1.5 py-0.5 rounded-full font-medium">
-                          Student
-                        </span>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-white truncate">{u.name}</p>
-                      <p className="text-[10px] text-zinc-400 truncate">{u.targetScore || '95%+'}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+          {/* Mode Switcher Tabs */}
+          <div className="flex bg-zinc-950/80 p-1 rounded-xl border border-white/10 relative z-10">
+            <button
+              type="button"
+              onClick={() => setMode('login')}
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition ${
+                mode === 'login'
+                  ? 'bg-white/15 text-white border border-white/15 shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Sign In</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('register')}
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition ${
+                mode === 'register'
+                  ? 'bg-white/15 text-white border border-white/15 shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>Create Account</span>
+            </button>
           </div>
 
-          {/* PIN Input Dots */}
-          <div className="space-y-3 pt-3 border-t border-white/10 relative z-10">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5 text-zinc-400" /> Security PIN:
-              </label>
-              <span className="text-[10px] text-zinc-400 font-mono bg-white/5 px-2 py-0.5 rounded-md border border-white/5">Default: 1234</span>
+          {/* Error & Success Alerts */}
+          {error && (
+            <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2 animate-shake relative z-10">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+              <span>{error}</span>
             </div>
+          )}
 
-            {/* Glowing PIN Dots */}
-            <div className="flex items-center justify-center gap-4 py-3 bg-zinc-950/70 border border-white/10 rounded-2xl shadow-inner">
-              {[0, 1, 2, 3].map((idx) => {
-                const isFilled = pin.length > idx;
-                return (
-                  <div
-                    key={idx}
-                    className={`w-3.5 h-3.5 rounded-full transition-all duration-300 ${
-                      isFilled
-                        ? 'bg-gradient-to-r from-violet-400 to-indigo-400 scale-125 shadow-[0_0_12px_rgba(168,85,247,0.8)]'
-                        : 'bg-zinc-800/80 border border-white/10'
-                    }`}
+          {successMsg && (
+            <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2 relative z-10">
+              <Check className="w-4 h-4 shrink-0 text-emerald-400" />
+              <span>{successMsg}</span>
+            </div>
+          )}
+
+          {/* SIGN IN FORM */}
+          {mode === 'login' && (
+            <form onSubmit={handleLoginSubmit} className="space-y-4 relative z-10">
+              {/* User ID / Username Field */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+                  <UserIcon className="w-3.5 h-3.5 text-violet-400" /> Custom User ID / Username:
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    placeholder="Enter your User ID (e.g. ashrith)"
+                    autoCapitalize="none"
+                    autoComplete="username"
+                    className="w-full bg-zinc-950/80 border border-white/10 hover:border-white/20 focus:border-violet-400/80 focus:ring-1 focus:ring-violet-400/80 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 outline-none transition"
                   />
-                );
-              })}
-            </div>
-
-            {error && (
-              <div className="p-2.5 rounded-xl bg-rose-950/40 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2 animate-shake">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{error}</span>
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* Numeric Keypad */}
-          <div className="grid grid-cols-3 gap-2.5 relative z-10">
-            {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
+              {/* Password Field */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-violet-400" /> Password:
+                  </label>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    autoComplete="current-password"
+                    className="w-full bg-zinc-950/80 border border-white/10 hover:border-white/20 focus:border-violet-400/80 focus:ring-1 focus:ring-violet-400/80 rounded-xl px-3.5 py-2.5 pr-10 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 outline-none transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 transition p-1"
+                    title={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Remember Me Option */}
+              <div className="flex items-center justify-between text-xs pt-1">
+                <label className="flex items-center gap-2 text-zinc-400 hover:text-zinc-200 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-3.5 h-3.5 rounded bg-zinc-950 border-white/20 text-violet-500 focus:ring-0"
+                  />
+                  <span>Remember my User ID</span>
+                </label>
+              </div>
+
+              {/* Submit Button */}
               <button
-                key={digit}
-                type="button"
-                onClick={() => handleKeyClick(digit)}
-                className="h-12 rounded-2xl bg-zinc-950/60 hover:bg-white/10 border border-white/10 hover:border-white/20 text-base font-bold text-white active-press transition flex items-center justify-center shadow-sm"
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 px-4 rounded-xl font-bold text-xs sm:text-sm bg-white text-zinc-950 hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-white/5 transition active-press flex items-center justify-center gap-2 mt-2"
               >
-                {digit}
+                {loading ? (
+                  <div className="w-4 h-4 border-2 border-zinc-900 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <span>Sign In to Chaduvuko</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
-            ))}
+            </form>
+          )}
 
-            <button
-              type="button"
-              onClick={handleClear}
-              className="h-12 rounded-2xl bg-zinc-950/30 hover:bg-white/5 border border-white/5 text-xs font-semibold text-zinc-400 hover:text-white active-press transition flex items-center justify-center"
-            >
-              Clear
-            </button>
+          {/* CREATE ACCOUNT / SIGN UP FORM */}
+          {mode === 'register' && (
+            <form onSubmit={handleRegisterSubmit} className="space-y-3.5 relative z-10">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-zinc-300">Full Name:</label>
+                <input
+                  type="text"
+                  value={regName}
+                  onChange={(e) => setRegName(e.target.value)}
+                  placeholder="e.g. Teja Swaroop"
+                  className="w-full bg-zinc-950/80 border border-white/10 hover:border-white/20 focus:border-violet-400/80 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 outline-none transition"
+                />
+              </div>
 
-            <button
-              type="button"
-              onClick={() => handleKeyClick('0')}
-              className="h-12 rounded-2xl bg-zinc-950/60 hover:bg-white/10 border border-white/10 hover:border-white/20 text-base font-bold text-white active-press transition flex items-center justify-center shadow-sm"
-            >
-              0
-            </button>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-zinc-300">Custom User ID (Login Username):</label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs font-mono">@</span>
+                  <input
+                    type="text"
+                    value={regUsername}
+                    onChange={(e) => setRegUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+                    placeholder="choose_your_id"
+                    autoCapitalize="none"
+                    className="w-full bg-zinc-950/80 border border-white/10 hover:border-white/20 focus:border-violet-400/80 rounded-xl pl-8 pr-3.5 py-2 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 outline-none transition font-mono"
+                  />
+                </div>
+                <p className="text-[10px] text-zinc-500">Only letters, numbers, and underscores.</p>
+              </div>
 
-            <button
-              type="button"
-              onClick={handleBackspace}
-              className="h-12 rounded-2xl bg-zinc-950/30 hover:bg-white/5 border border-white/5 text-zinc-400 hover:text-white active-press transition flex items-center justify-center"
-              title="Backspace"
-            >
-              <Delete className="w-4 h-4" />
-            </button>
-          </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-zinc-300">Password:</label>
+                <input
+                  type="password"
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  placeholder="Minimum 4 characters"
+                  className="w-full bg-zinc-950/80 border border-white/10 hover:border-white/20 focus:border-violet-400/80 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 outline-none transition"
+                />
+              </div>
 
-          {/* Sign In Button */}
-          <button
-            type="button"
-            disabled={pin.length < 4 || loading}
-            onClick={() => handleSubmit()}
-            className="w-full py-3.5 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-white text-zinc-950 hover:bg-zinc-100 disabled:opacity-40 disabled:cursor-not-allowed shadow-xl shadow-white/5 transition active-press flex items-center justify-center gap-2 relative z-10"
-          >
-            {loading ? (
-              <div className="w-4 h-4 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <>
-                <span>Sign In as {selectedUser?.name || 'Student'}</span>
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
-          </button>
+              {/* Avatar Picker */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-zinc-300">Choose Student Avatar:</label>
+                <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+                  {AVATAR_OPTIONS.map((av) => (
+                    <button
+                      key={av}
+                      type="button"
+                      onClick={() => setRegAvatar(av)}
+                      className={`text-lg p-1.5 rounded-xl border transition ${
+                        regAvatar === av
+                          ? 'bg-white/20 border-white/40 scale-110'
+                          : 'bg-zinc-950/60 border-white/5 hover:bg-white/10'
+                      }`}
+                    >
+                      {av}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Target Score */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-zinc-300">Target Board Exam Score:</label>
+                <select
+                  value={regTargetScore}
+                  onChange={(e) => setRegTargetScore(e.target.value)}
+                  className="w-full bg-zinc-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-zinc-200 outline-none"
+                >
+                  <option value="98%+">98%+ (State Rank Track)</option>
+                  <option value="95%+">95%+ (Distinction)</option>
+                  <option value="90%+">90%+ (First Class)</option>
+                  <option value="85%+">85%+</option>
+                </select>
+              </div>
+
+              {/* Submit Register Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 px-4 rounded-xl font-bold text-xs sm:text-sm bg-gradient-to-r from-violet-500 to-indigo-500 hover:from-violet-400 hover:to-indigo-400 text-white shadow-xl shadow-violet-500/20 transition active-press flex items-center justify-center gap-2 mt-3"
+              >
+                {loading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    <span>Create Account & Start</span>
+                  </>
+                )}
+              </button>
+            </form>
+          )}
         </div>
 
-        {/* Security Note Footer */}
+        {/* Footnote */}
         <p className="text-center text-[11px] text-zinc-500">
-          🔒 Secure individual student access. Default PIN for all accounts is <span className="text-zinc-400 font-mono">1234</span>.
+          🔒 Private & isolated accounts. Other user accounts are never exposed on this device.
         </p>
       </div>
     </div>
